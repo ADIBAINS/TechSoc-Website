@@ -1,0 +1,18 @@
+:root {
+  --color-paper: oklch(10% .02 34);
+  --color-paper-2: oklch(14% .025 32);
+  --color-paper-3: oklch(18% .03 30);
+  --color-ink: oklch(95% .015 70);
+  --color-ink-2: oklch(78% .02 65);
+  --color-muted: oklch(62% .02 50);
+  --color-neutral: oklch(46% .02 45);
+  --color-rule: oklch(27% .025 35);
+  --color-accent: oklch(78% .14 69);
+  --color-accent-ink: oklch(16% .03 35);
+  --color-accent-soft: oklch(22% .07 62);
+  --color-secondary: oklch(46% .13 8);
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+  --page-gutter: clamp(1.25rem, 5vw, 5.5rem);
+}
