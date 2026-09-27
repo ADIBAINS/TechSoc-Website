@@ -45,7 +45,17 @@ function Dashboard({ admin, onLogout }: { admin: { email: string }; onLogout: ()
   const [messages, setMessages] = useState<AdminRecord[]>([])
   const refresh = () => fetch('/api/admin-content').then((response) => response.json()).then(setData)
   const refreshMessages = () => fetch('/api/contact').then((response) => response.ok ? response.json() : []).then(setMessages).catch(() => {})
-  useEffect(() => { refresh(); refreshMessages() }, [])
+  useEffect(() => {
+    refresh(); refreshMessages()
+    // Surface pre-Blob images that never made it to Blob (see db:migrate-uploads).
+    fetch('/api/settings')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((settings) => {
+        const broken = Array.isArray(settings?.broken_images) ? settings.broken_images : []
+        if (broken.length) setNotice(`${broken.length} image${broken.length === 1 ? '' : 's'} could not be moved to Blob — re-upload them in the editors below.`)
+      })
+      .catch(() => {})
+  }, [])
   useEffect(() => {
     if (tab !== 'hero' || heroAsset) return
     fetch('/api/settings').then((response) => response.ok ? response.json() : null).then((settings) => { if (settings?.hero_asset) setHeroAsset(settings.hero_asset) }).catch(() => {})
