@@ -54,7 +54,24 @@ function Dashboard({ admin, onLogout }: { admin: { email: string }; onLogout: ()
   const remove = async (type: ContentTab, id: number) => { if (!window.confirm('Delete this item?')) return; await fetch('/api/admin-content', { method: 'DELETE', headers: jsonHeaders, body: JSON.stringify({ type, id }) }); setNotice('Deleted.'); refresh() }
   const saveHero = async () => { if (!heroAsset) return; await fetch('/api/settings', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ hero_asset: heroAsset }) }); setNotice('Homepage hero asset saved.') }
   const switchTab = (next: Tab) => { setTab(next); setEditing(null) }
-  return <main className="admin-page admin-dashboard"><header className="admin-topbar"><div><span className="admin-kicker">techsoc / control room</span><h1>Content desk.</h1></div><div className="admin-account"><span>{admin.email}</span><button onClick={logout}><LogOut size={15} /> Sign out</button></div></header><div className="admin-tabs">{allTabs.map((item) => <button className={tab === item ? 'active' : ''} key={item} onClick={() => switchTab(item)}>{item === 'hero' ? 'hero asset' : item}{item === 'inbox' ? <b>{messages.length}</b> : isContentTab(item) ? <b>{data[item].length}</b> : null}</button>)}<a href="/">View public site ↗</a></div>{notice && <div className="admin-notice">{notice}<button onClick={() => setNotice('')}><X size={14} /></button></div>}{tab === 'hero' ? <HeroAsset value={heroAsset} onChange={setHeroAsset} onSave={saveHero} /> : tab === 'inbox' ? <Inbox messages={messages} onRefresh={refreshMessages} /> : <ContentPanel tab={tab} data={data} editing={editing} setEditing={setEditing} onDelete={remove} onSaved={() => { setEditing(null); setNotice('Saved.'); refresh() }} onRefresh={refresh} />}</main>
+  return <main className="admin-page admin-dashboard"><header className="admin-topbar"><div><span className="admin-kicker">techsoc / control room</span><h1>Content desk.</h1></div><div className="admin-account"><span>{admin.email}</span><button onClick={logout}><LogOut size={15} /> Sign out</button></div></header><div className="admin-tabs">{allTabs.map((item) => <button className={tab === item ? 'active' : ''} key={item} onClick={() => switchTab(item)}>{item === 'hero' ? 'hero asset' : item}{item === 'inbox' ? <b>{messages.length}</b> : isContentTab(item) ? <b>{data[item].length}</b> : null}</button>)}<a href="/">View public site ↗</a></div>{notice && <div className="admin-notice">{notice}<button onClick={() => setNotice('')}><X size={14} /></button></div>}{tab === 'hero' ? <HeroAsset value={heroAsset} onChange={setHeroAsset} onSave={saveHero} /> : tab === 'inbox' ? <Inbox messages={messages} onRefresh={refreshMessages} /> : <ContentPanel tab={tab} data={data} editing={editing} setEditing={setEditing} onDelete={remove} onSaved={() => { setEditing(null); setNotice('Saved.'); refresh() }} onRefresh={refresh} />}<PasswordChange notify={setNotice} /></main>
+}
+
+function PasswordChange({ notify }: { notify: (message: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = async (event: FormEvent) => {
+    event.preventDefault(); setBusy(true); setError('')
+    const response = await fetch('/api/auth', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ currentPassword, newPassword }) })
+    const result = await response.json().catch(() => ({})) as { error?: string }
+    setBusy(false)
+    if (!response.ok) { setError(result.error ?? 'Could not change password'); return }
+    setCurrentPassword(''); setNewPassword(''); setOpen(false); notify('Password changed.')
+  }
+  return <section className="admin-inbox admin-panel"><div className="admin-list-head"><div><span className="admin-kicker">Security</span><h2>Password</h2></div><button className="admin-secondary" onClick={() => setOpen(!open)}>{open ? 'Cancel' : 'Change password'}</button></div>{open && <form className="admin-form" onSubmit={submit}><label>Current password<input value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} type="password" required autoComplete="current-password" /></label><label>New password (8+ characters)<input value={newPassword} onChange={(event) => setNewPassword(event.target.value)} type="password" required minLength={8} autoComplete="new-password" /></label>{error && <p className="admin-error">{error}</p>}<button className="admin-primary" disabled={busy}>{busy ? 'Saving…' : 'Save new password'}</button></form>}</section>
 }
 
 function ContentPanel({ tab, data, editing, setEditing, onDelete, onSaved, onRefresh }: { tab: ContentTab; data: AdminData; editing: AdminRecord | null; setEditing: (record: AdminRecord | null) => void; onDelete: (type: ContentTab, id: number) => void; onSaved: () => void; onRefresh: () => void }) {

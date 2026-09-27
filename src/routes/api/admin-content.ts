@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { authenticate } from '../../server/auth.server'
-import { dbAll, dbRun, dbInsertReturningId, type SqlValue } from '../../server/db.server'
+import { authenticate, csrfBlock } from '../../server/auth.server'
+import { dbAll, dbGet, dbRun, dbInsertReturningId, type SqlValue } from '../../server/db.server'
+import { adminCreateSchema, adminDeleteSchema, adminUpdateSchema, readJson } from '../../server/validate'
 
 const tables = {
   members: { name: 'members', order: 'sort_order asc, created_at desc' },
@@ -15,7 +16,6 @@ const columns: Record<ContentType, string[]> = {
   memories: ['title', 'caption', 'image_path', 'event_id', 'sort_order', 'published'],
 }
 
-function table(value: unknown): ContentType | null { return typeof value === 'string' && value in tables ? value as ContentType : null }
 async function allContent() {
   const entries = await Promise.all(
     Object.entries(tables).map(async ([key, config]) => [key, await dbAll(`select * from ${config.name} order by ${config.order}`)]),
@@ -39,40 +39,46 @@ export const Route = createFileRoute('/api/admin-content')({
     handlers: {
       GET: async ({ request }) => (await authenticate(request)) ? Response.json(await allContent()) : Response.json({ error: 'Unauthorized' }, { status: 401 }),
       POST: async ({ request }) => {
+        const blocked = csrfBlock(request)
+        if (blocked) return blocked
         if (!(await authenticate(request))) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        const body = await request.json() as { type?: string; data?: Record<string, unknown> }
-        const kind = table(body.type)
-        if (!kind || !body.data) return Response.json({ error: 'Invalid content payload' }, { status: 400 })
-        const { fields, values } = pickedFields(kind, body.data)
+        const result = await readJson(request, adminCreateSchema)
+        if ('error' in result) return result.error
+        const { type: kind, data } = result.data
+        const { fields, values } = pickedFields(kind, data as Record<string, unknown>)
         if (!fields.length) return Response.json({ error: 'No fields supplied' }, { status: 400 })
-        const result = await dbInsertReturningId(`insert into ${tables[kind].name} (${fields.join(', ')}) values (${fields.map(() => '?').join(', ')})`, values)
+        const inserted = await dbInsertReturningId(`insert into ${tables[kind].name} (${fields.join(', ')}) values (${fields.map(() => '?').join(', ')})`, values)
         // id last: a client-supplied id in the payload must not shadow the real one
-        return Response.json({ ...body.data, id: Number(result.lastInsertRowid) })
+        return Response.json({ ...(data as Record<string, unknown>), id: Number(inserted.lastInsertRowid) })
       },
       PUT: async ({ request }) => {
+        const blocked = csrfBlock(request)
+        if (blocked) return blocked
         if (!(await authenticate(request))) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        const body = await request.json() as { type?: string; id?: number; data?: Record<string, unknown> }
-        const kind = table(body.type)
-        if (!kind || !body.id || !body.data) return Response.json({ error: 'Invalid content payload' }, { status: 400 })
-        const { fields, values } = pickedFields(kind, body.data)
+        const result = await readJson(request, adminUpdateSchema)
+        if ('error' in result) return result.error
+        const { type: kind, id, data } = result.data
+        const { fields, values } = pickedFields(kind, data as Record<string, unknown>)
         if (!fields.length) return Response.json({ error: 'No fields supplied' }, { status: 400 })
-        await dbRun(`update ${tables[kind].name} set ${fields.map((field) => `${field} = ?`).join(', ')} where id = ?`, [...values, body.id])
+        await dbRun(`update ${tables[kind].name} set ${fields.map((field) => `${field} = ?`).join(', ')} where id = ?`, [...values, id])
         return Response.json({ ok: true })
       },
       DELETE: async ({ request }) => {
+        const blocked = csrfBlock(request)
+        if (blocked) return blocked
         if (!(await authenticate(request))) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        const body = await request.json() as { type?: string; id?: number }
-        const kind = table(body.type)
-        if (!kind || !body.id) return Response.json({ error: 'Invalid delete payload' }, { status: 400 })
+        const result = await readJson(request, adminDeleteSchema)
+        if ('error' in result) return result.error
+        const { type: kind, id } = result.data
         // Null out references first (SQLite lacks ON DELETE SET NULL enforcement
         // in some paths; Postgres enforces it) so deletes never 500.
         if (kind === 'events') {
-          await dbRun('update memories set event_id = null where event_id = ?', [body.id])
+          await dbRun('update memories set event_id = null where event_id = ?', [id])
         }
         if (kind === 'memories') {
-          await dbRun('delete from memory_media where memory_id = ?', [body.id])
+          await dbRun('delete from memory_media where memory_id = ?', [id])
         }
-        await dbRun(`delete from ${tables[kind].name} where id = ?`, [body.id])
+        await dbRun(`delete from ${tables[kind].name} where id = ?`, [id])
         return Response.json({ ok: true })
       },
     },
