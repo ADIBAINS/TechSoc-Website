@@ -27,6 +27,7 @@ create table if not exists memory_media (id serial primary key, memory_id intege
 create index if not exists memory_media_memory on memory_media (memory_id, sort_order);
 create table if not exists site_settings (key text primary key, value text not null default '{}', updated_at timestamptz not null default now());
 create table if not exists contact_submissions (id serial primary key, name text not null, email text not null, involvement text default '', message text not null, created_at timestamptz not null default now());
+create table if not exists event_rsvps (id serial primary key, event_id integer not null references events(id) on delete cascade, name text not null, email text not null, created_at timestamptz not null default now(), unique (event_id, email));
 `
 
 let schemaEnsured = false
@@ -59,6 +60,8 @@ function getSqlite(): DatabaseSync {
   create index if not exists memory_media_memory on memory_media (memory_id, sort_order);
   create table if not exists site_settings (key text primary key, value text not null default '{}', updated_at text not null default current_timestamp);
   create table if not exists contact_submissions (id integer primary key, name text not null, email text not null, involvement text default '', message text not null, created_at text not null default current_timestamp);
+  create table if not exists event_rsvps (id integer primary key, event_id integer not null references events(id) on delete cascade, name text not null, email text not null, created_at text not null default current_timestamp);
+  create unique index if not exists event_rsvps_event_email on event_rsvps (event_id, email);
 `)
   return sqliteDb
 }

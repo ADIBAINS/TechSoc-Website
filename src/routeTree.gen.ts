@@ -17,6 +17,7 @@ import { Route as ApiContactRouteImport } from './routes/api/contact'
 import { Route as ApiContentRouteImport } from './routes/api/content'
 import { Route as ApiCronCleanupRouteImport } from './routes/api/cron-cleanup'
 import { Route as ApiMemoryMediaRouteImport } from './routes/api/memory-media'
+import { Route as ApiRsvpRouteImport } from './routes/api/rsvp'
 import { Route as ApiSettingsRouteImport } from './routes/api/settings'
 import { Route as ApiUploadRouteImport } from './routes/api/upload'
 import { Route as ApiUploadsFilenameRouteImport } from './routes/api/uploads.$filename'
@@ -61,6 +62,11 @@ const ApiMemoryMediaRoute = ApiMemoryMediaRouteImport.update({
   path: '/api/memory-media',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRsvpRoute = ApiRsvpRouteImport.update({
+  id: '/api/rsvp',
+  path: '/api/rsvp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSettingsRoute = ApiSettingsRouteImport.update({
   id: '/api/settings',
   path: '/api/settings',
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/api/content': typeof ApiContentRoute
   '/api/cron-cleanup': typeof ApiCronCleanupRoute
   '/api/memory-media': typeof ApiMemoryMediaRoute
+  '/api/rsvp': typeof ApiRsvpRoute
   '/api/settings': typeof ApiSettingsRoute
   '/api/upload': typeof ApiUploadRoute
   '/api/uploads/$filename': typeof ApiUploadsFilenameRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/api/content': typeof ApiContentRoute
   '/api/cron-cleanup': typeof ApiCronCleanupRoute
   '/api/memory-media': typeof ApiMemoryMediaRoute
+  '/api/rsvp': typeof ApiRsvpRoute
   '/api/settings': typeof ApiSettingsRoute
   '/api/upload': typeof ApiUploadRoute
   '/api/uploads/$filename': typeof ApiUploadsFilenameRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/api/content': typeof ApiContentRoute
   '/api/cron-cleanup': typeof ApiCronCleanupRoute
   '/api/memory-media': typeof ApiMemoryMediaRoute
+  '/api/rsvp': typeof ApiRsvpRoute
   '/api/settings': typeof ApiSettingsRoute
   '/api/upload': typeof ApiUploadRoute
   '/api/uploads/$filename': typeof ApiUploadsFilenameRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/api/content'
     | '/api/cron-cleanup'
     | '/api/memory-media'
+    | '/api/rsvp'
     | '/api/settings'
     | '/api/upload'
     | '/api/uploads/$filename'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/api/content'
     | '/api/cron-cleanup'
     | '/api/memory-media'
+    | '/api/rsvp'
     | '/api/settings'
     | '/api/upload'
     | '/api/uploads/$filename'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/api/content'
     | '/api/cron-cleanup'
     | '/api/memory-media'
+    | '/api/rsvp'
     | '/api/settings'
     | '/api/upload'
     | '/api/uploads/$filename'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   ApiContentRoute: typeof ApiContentRoute
   ApiCronCleanupRoute: typeof ApiCronCleanupRoute
   ApiMemoryMediaRoute: typeof ApiMemoryMediaRoute
+  ApiRsvpRoute: typeof ApiRsvpRoute
   ApiSettingsRoute: typeof ApiSettingsRoute
   ApiUploadRoute: typeof ApiUploadRoute
   ApiUploadsFilenameRoute: typeof ApiUploadsFilenameRoute
@@ -231,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMemoryMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/rsvp': {
+      id: '/api/rsvp'
+      path: '/api/rsvp'
+      fullPath: '/api/rsvp'
+      preLoaderRoute: typeof ApiRsvpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/settings': {
       id: '/api/settings'
       path: '/api/settings'
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiContentRoute: ApiContentRoute,
   ApiCronCleanupRoute: ApiCronCleanupRoute,
   ApiMemoryMediaRoute: ApiMemoryMediaRoute,
+  ApiRsvpRoute: ApiRsvpRoute,
   ApiSettingsRoute: ApiSettingsRoute,
   ApiUploadRoute: ApiUploadRoute,
   ApiUploadsFilenameRoute: ApiUploadsFilenameRoute,

@@ -152,3 +152,25 @@
 @media(max-width:700px){.archive-stats{justify-content:center}}
 .carousel-gallery .gallery-meta{display:flex;height:60px;align-items:center;gap:8px;margin:0;color:var(--reference-muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
 .carousel-gallery .gallery-meta svg{color:var(--reference-cyan)}
+
+/* RSVP — inline registration form inside event cards */
+.rsvp-form{display:grid;gap:9px}
+.rsvp-form input{width:100%;min-height:42px;padding:9px 12px;border:1px solid var(--reference-line);border-radius:0;background:#07090a;color:var(--reference-silver);font:13px Inter,sans-serif;outline:0}
+.rsvp-form input:focus{border-color:var(--reference-cyan);box-shadow:0 0 0 2px rgba(0,200,245,.15)}
+.rsvp-error{color:#ff8d9b;font-size:11px}
+.rsvp-actions{display:flex;gap:9px}
+.rsvp-actions .event-rsvp{flex:1}
+.rsvp-cancel{border:1px solid var(--reference-line);background:transparent;color:var(--reference-muted);padding:0 14px;font-size:12px;font-weight:700;cursor:pointer}
+.rsvp-cancel:hover{border-color:var(--reference-cyan);color:var(--reference-cyan)}
+
+/* Announcement banner */
+.announce-bar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 20px;background:var(--reference-cyan);color:#031014;font-size:13px;font-weight:600}
+.announce-bar a{color:inherit;text-decoration:underline}
+.announce-bar button{display:grid;place-items:center;border:0;background:transparent;color:inherit;cursor:pointer}
+
+/* RSVP attendee list in the control room */
+.rsvp-list{margin:14px 0 0;padding:12px 0 0;border-top:1px solid #1c2a2e}
+.rsvp-list>span{color:var(--reference-muted);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.rsvp-list ul{margin:9px 0 0;padding:0;list-style:none;display:grid;gap:7px}
+.rsvp-list li{display:flex;align-items:baseline;justify-content:space-between;gap:10px;color:var(--reference-silver);font-size:12px}
+.rsvp-list li small{color:var(--reference-muted);font-size:10px}

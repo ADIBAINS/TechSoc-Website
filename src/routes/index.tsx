@@ -240,7 +240,20 @@ function TeamCard({ member, delay }: { member: Member; delay: number }) {
 function EventCard({ event, reserved, onReserve }: { event: DisplayEvent; reserved: boolean; onReserve: (event: DisplayEvent) => void }) {
   const date = event.starts_at ? new Date(event.starts_at) : null
   const ModeIcon = event.mode === 'video' ? Video : event.mode === 'users' ? UsersRound : MapPin
-  return <motion.article className="event-card" whileHover={{ y: -8 }} transition={transition}><div><div className="event-card-top"><span>{event.kindLabel}</span><small>{event.meta}</small></div><h3>{event.title}</h3><p>{event.description}</p><ul><li><CalendarDays size={16} />{date ? date.toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Date to be announced'}</li><li><ModeIcon size={16} />{event.location || 'Location to be announced'}</li><li><UsersRound size={16} />Open access for everyone</li></ul></div><button className={reserved ? 'event-rsvp is-reserved' : 'event-rsvp'} onClick={() => onReserve(event)}>{reserved ? 'Spot Confirmed!' : event.cta}{reserved ? <Check size={16} /> : event.kind === 'Speaker Talk' ? <Bookmark size={16} /> : <ArrowRight size={16} />}</button></motion.article>
+  const [formOpen, setFormOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [formError, setFormError] = useState('')
+  const submitRsvp = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); setBusy(true); setFormError('')
+    const response = await fetch('/api/rsvp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ event_id: event.id, name, email }) })
+    const result = await response.json().catch(() => ({})) as { error?: string; registered?: boolean }
+    setBusy(false)
+    if (!response.ok && !result.registered) { setFormError(result.error ?? 'Could not save your RSVP'); return }
+    setFormOpen(false); onReserve(event)
+  }
+  return <motion.article className="event-card" whileHover={{ y: -8 }} transition={transition}><div><div className="event-card-top"><span>{event.kindLabel}</span><small>{event.meta}</small></div><h3>{event.title}</h3><p>{event.description}</p><ul><li><CalendarDays size={16} />{date ? date.toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'Date to be announced'}</li><li><ModeIcon size={16} />{event.location || 'Location to be announced'}</li><li><UsersRound size={16} />Open access for everyone</li></ul></div>{reserved ? <button className="event-rsvp is-reserved">Spot Confirmed! <Check size={16} /></button> : formOpen ? <form className="rsvp-form" onSubmit={submitRsvp}><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required maxLength={200} aria-label="Your name" /><input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required type="email" aria-label="Email" />{formError && <small className="rsvp-error">{formError}</small>}<div className="rsvp-actions"><button className="event-rsvp" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Confirm RSVP'}</button><button className="rsvp-cancel" type="button" onClick={() => setFormOpen(false)}>Cancel</button></div></form> : <button className="event-rsvp" onClick={() => { setFormOpen(true); setFormError('') }}>{event.cta}{event.kind === 'Speaker Talk' ? <Bookmark size={16} /> : <ArrowRight size={16} />}</button>}</motion.article>
 }
 
 function GalleryCard({ memory, onOpen }: { memory: Memory; onOpen: () => void }) {

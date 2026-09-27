@@ -259,6 +259,7 @@ function Editor({ type, initial, onClose, onSaved, onRefresh }: { type: ContentT
   }
 
   return <aside className="admin-editor"><div className="admin-editor-head"><div><span className="admin-kicker">{initial.id ? 'Edit' : 'New'} record</span><h2>{singular(type)}</h2></div><button onClick={onClose}><X size={18} /></button></div><form className="admin-form" onSubmit={submit}>{fields.map(([key, label]) => <label key={key}>{label}{renderField(key, form[key] ?? '', set)}</label>)}
+    {type === 'events' && initial.id > 0 && <EventRsvps eventId={initial.id} />}
     {type === 'memories'
       ? initial.id
         ? <MemoryMedia memoryId={initial.id} coverPath={String(initial.image_path ?? form.image_path ?? '')} onChanged={onRefresh} />
@@ -270,8 +271,18 @@ function Editor({ type, initial, onClose, onSaved, onRefresh }: { type: ContentT
   </form></aside>
 }
 
-function renderField(key: string, value: string, set: (key: string, value: string) => void) {
-  if (key === 'kind') return <select value={value || EVENT_KINDS[0].label} onChange={(event) => set(key, event.target.value)}>{EVENT_KINDS.map((option) => <option key={option.value} value={option.label}>{option.label}</option>)}</select>
+function EventRsvps({ eventId }: { eventId: number }) {
+  const [attendees, setAttendees] = useState<{ id: number; name: string; email: string; created_at: string }[]>([])
+  useEffect(() => {
+    fetch(`/api/rsvp?event_id=${eventId}`)
+      .then((response) => (response.ok ? response.json() : []))
+      .then(setAttendees)
+      .catch(() => {})
+  }, [eventId])
+  return <div className="rsvp-list"><span>{attendees.length} RSVP{attendees.length === 1 ? '' : 's'}</span>{attendees.length > 0 && <ul>{attendees.map((a) => <li key={a.id}>{a.name}<small>{a.email}</small></li>)}</ul>}</div>
+}
+
+function renderField(key: string, value: string, set: (key: string, value: string) => void) {  if (key === 'kind') return <select value={value || EVENT_KINDS[0].label} onChange={(event) => set(key, event.target.value)}>{EVENT_KINDS.map((option) => <option key={option.value} value={option.label}>{option.label}</option>)}</select>
   if (key === 'bio' || key === 'description' || key === 'caption') return <textarea value={value} onChange={(event) => set(key, event.target.value)} rows={4} />
   return <input value={value} onChange={(event) => set(key, event.target.value)} type={key === 'starts_at' ? 'datetime-local' : key.includes('url') ? 'url' : 'text'} required={key === 'name' || key === 'title'} />
 }
