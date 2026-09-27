@@ -20,13 +20,13 @@ export const Route = createFileRoute('/api/auth')({
         const { email, password } = parsed.data
         const limit = checkRateLimit(`login:${clientIp(request)}:${email}`, 5, 15 * 60 * 1000)
         if (!limit.allowed) return rateLimitResponse(limit.retryAfterSec)
-        const admin = await dbGet<{ id: number; email: string; password_hash: string }>(
-          'select id, email, password_hash from admins where email = ?',
+        const admin = await dbGet<{ id: number; email: string; role: string | null; password_hash: string }>(
+          'select id, email, role, password_hash from admins where email = ?',
           [email],
         )
         if (!admin || !bcrypt.compareSync(password, admin.password_hash)) return Response.json({ error: 'Invalid email or password' }, { status: 401 })
         const session = await createSession(admin.id)
-        return new Response(JSON.stringify({ admin: { id: admin.id, email: admin.email } }), { headers: { 'content-type': 'application/json', 'set-cookie': sessionCookie(session.token, session.expires) } })
+        return new Response(JSON.stringify({ admin: { id: admin.id, email: admin.email, role: admin.role || 'admin' } }), { headers: { 'content-type': 'application/json', 'set-cookie': sessionCookie(session.token, session.expires) } })
       },
       DELETE: async ({ request }) => {
         const blocked = csrfBlock(request)

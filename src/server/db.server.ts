@@ -19,6 +19,7 @@ function toPostgres(sql: string): string {
 
 const POSTGRES_SCHEMA = `
 create table if not exists admins (id serial primary key, email text unique not null, password_hash text not null, created_at timestamptz not null default now());
+alter table admins add column if not exists role text not null default 'admin';
 create table if not exists sessions (token text primary key, admin_id integer not null references admins(id) on delete cascade, expires_at timestamptz not null);
 create table if not exists members (id serial primary key, name text not null, role text default '', bio text default '', image_path text, github_url text, linkedin_url text, portfolio_url text, sort_order integer default 0, published integer not null default 1, created_at timestamptz not null default now());
 create table if not exists events (id serial primary key, title text not null, kind text default 'Workshop', description text default '', starts_at text, location text default '', registration_url text, cover_image_path text, published integer not null default 1, created_at timestamptz not null default now());
@@ -65,6 +66,12 @@ function getSqlite(): DatabaseSync {
   create unique index if not exists event_rsvps_event_email on event_rsvps (event_id, email);
   create table if not exists sponsors (id integer primary key, name text not null, logo_path text, url text default '', tier text default 'Community', sort_order integer default 0, published integer not null default 1, created_at text not null default current_timestamp);
 `)
+  // Role column for pre-existing SQLite files (SQLite has no ADD COLUMN IF NOT EXISTS).
+  try {
+    sqliteDb.exec(`alter table admins add column role text not null default 'admin'`)
+  } catch {
+    // column already exists
+  }
   return sqliteDb
 }
 

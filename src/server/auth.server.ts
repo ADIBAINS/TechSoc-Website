@@ -6,15 +6,24 @@ const sessionDuration = 1000 * 60 * 60 * 24 * 14
 // SQLite uses datetime('now'), Postgres uses NOW().
 const nowExpr = isPostgres ? 'NOW()' : `datetime('now')`
 
-export async function authenticate(request: Request) {
+export type Session = { id: number; email: string; role: string }
+
+export async function authenticate(request: Request): Promise<Session | null> {
   await ensureAdmin()
   const token = request.headers.get('cookie')?.match(/techsoc_session=([^;]+)/)?.[1]
   if (!token) return null
-  const session = await dbGet<{ id: number; email: string }>(
-    `select admins.id, admins.email from sessions join admins on admins.id = sessions.admin_id where sessions.token = ? and sessions.expires_at > ${nowExpr}`,
+  const session = await dbGet<{ id: number; email: string; role: string | null }>(
+    `select admins.id, admins.email, admins.role from sessions join admins on admins.id = sessions.admin_id where sessions.token = ? and sessions.expires_at > ${nowExpr}`,
     [token],
   )
-  return session || null
+  if (!session) return null
+  return { id: session.id, email: session.email, role: session.role || 'admin' }
+}
+
+/** Session + admin-role check for admin-only routes (settings, admin accounts). */
+export async function requireAdmin(request: Request): Promise<Session | null> {
+  const session = await authenticate(request)
+  return session && session.role === 'admin' ? session : null
 }
 
 export async function createSession(adminId: number) {

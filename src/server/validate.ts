@@ -86,6 +86,14 @@ export const rsvpSchema = z.object({
   email,
 })
 
+// /api/admins (admin-only account management)
+export const adminInviteSchema = z.object({
+  email,
+  password: z.string().min(8).max(256),
+  role: z.enum(['admin', 'editor']).optional().default('editor'),
+})
+export const adminRemoveSchema = z.object({ id })
+
 /** Parse request JSON against a schema. Returns data or a 400 Response. */
 export async function readJson<T extends z.ZodTypeAny>(
   request: Request,

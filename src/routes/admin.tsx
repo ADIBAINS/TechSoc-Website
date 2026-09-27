@@ -9,9 +9,8 @@ type AdminRecord = Record<string, unknown> & { id: number }
 type AdminData = { members: AdminRecord[]; events: AdminRecord[]; memories: AdminRecord[]; sponsors: AdminRecord[] }
 type MediaRow = { id: number; path: string; kind: string; caption: string; sort_order: number }
 type ContentTab = keyof AdminData
-type Tab = ContentTab | 'hero' | 'inbox'
+type Tab = ContentTab | 'hero' | 'inbox' | 'admins'
 const contentTabs: ContentTab[] = ['members', 'events', 'memories', 'sponsors']
-const allTabs: Tab[] = [...contentTabs, 'hero', 'inbox']
 const emptyData: AdminData = { members: [], events: [], memories: [], sponsors: [] }
 const isContentTab = (tab: Tab): tab is ContentTab => (contentTabs as string[]).includes(tab)
 // Naive de-pluralising breaks on "memories" -> "memorie", so map it explicitly.
@@ -19,15 +18,17 @@ const SINGULAR: Record<ContentTab, string> = { members: 'member', events: 'event
 const singular = (tab: ContentTab) => SINGULAR[tab]
 const jsonHeaders = { 'content-type': 'application/json' }
 
+type AdminSession = { email: string; role: string }
+
 function Admin() {
-  const [admin, setAdmin] = useState<{ email: string } | null>(null)
+  const [admin, setAdmin] = useState<AdminSession | null>(null)
   const [checking, setChecking] = useState(true)
   useEffect(() => { fetch('/api/auth').then((response) => response.json()).then((data) => { setAdmin(data.admin); setChecking(false) }).catch(() => setChecking(false)) }, [])
   if (checking) return <div className="admin-page"><p className="admin-muted">Opening control room…</p></div>
   return admin ? <Dashboard admin={admin} onLogout={() => setAdmin(null)} /> : <Login onLogin={setAdmin} />
 }
 
-function Login({ onLogin }: { onLogin: (admin: { email: string }) => void }) {
+function Login({ onLogin }: { onLogin: (admin: AdminSession) => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -36,7 +37,10 @@ function Login({ onLogin }: { onLogin: (admin: { email: string }) => void }) {
   return <main className="admin-page admin-login"><div className="admin-login-mark">ts</div><span className="admin-kicker">techsoc / control room</span><h1>Private admin.</h1><p className="admin-muted">Sign in to manage members, events, memories, and the homepage assets.</p><form className="admin-form" onSubmit={submit}><label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required autoComplete="email" placeholder="you@example.com" /></label><label>Password<input value={password} onChange={(event) => setPassword(event.target.value)} type="password" required autoComplete="current-password" /></label>{error && <p className="admin-error">{error}</p>}<button className="admin-primary" disabled={busy}>{busy ? 'Signing in…' : 'Enter control room'}</button></form><a className="admin-back" href="/">← Back to public site</a></main>
 }
 
-function Dashboard({ admin, onLogout }: { admin: { email: string }; onLogout: () => void }) {
+function Dashboard({ admin, onLogout }: { admin: AdminSession; onLogout: () => void }) {
+  const isAdmin = admin.role === 'admin'
+  // Editors keep content + inbox; hero asset and account management are admin-only.
+  const visibleTabs: Tab[] = [...contentTabs, ...(isAdmin ? (['hero', 'admins'] as Tab[]) : []), 'inbox']
   const [tab, setTab] = useState<Tab>('members')
   const [data, setData] = useState<AdminData>(emptyData)
   const [editing, setEditing] = useState<AdminRecord | null>(null)
@@ -64,7 +68,7 @@ function Dashboard({ admin, onLogout }: { admin: { email: string }; onLogout: ()
   const remove = async (type: ContentTab, id: number) => { if (!window.confirm('Delete this item?')) return; await fetch('/api/admin-content', { method: 'DELETE', headers: jsonHeaders, body: JSON.stringify({ type, id }) }); setNotice('Deleted.'); refresh() }
   const saveHero = async () => { if (!heroAsset) return; await fetch('/api/settings', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ hero_asset: heroAsset }) }); setNotice('Homepage hero asset saved.') }
   const switchTab = (next: Tab) => { setTab(next); setEditing(null) }
-  return <main className="admin-page admin-dashboard"><header className="admin-topbar"><div><span className="admin-kicker">techsoc / control room</span><h1>Content desk.</h1></div><div className="admin-account"><span>{admin.email}</span><button onClick={logout}><LogOut size={15} /> Sign out</button></div></header><div className="admin-tabs">{allTabs.map((item) => <button className={tab === item ? 'active' : ''} key={item} onClick={() => switchTab(item)}>{item === 'hero' ? 'hero asset' : item}{item === 'inbox' ? <b>{messages.length}</b> : isContentTab(item) ? <b>{data[item].length}</b> : null}</button>)}<a href="/">View public site ↗</a></div>{notice && <div className="admin-notice">{notice}<button onClick={() => setNotice('')}><X size={14} /></button></div>}{tab === 'hero' ? <HeroAsset value={heroAsset} onChange={setHeroAsset} onSave={saveHero} /> : tab === 'inbox' ? <Inbox messages={messages} onRefresh={refreshMessages} /> : <ContentPanel tab={tab} data={data} editing={editing} setEditing={setEditing} onDelete={remove} onSaved={() => { setEditing(null); setNotice('Saved.'); refresh() }} onRefresh={refresh} />}<PasswordChange notify={setNotice} /></main>
+  return <main className="admin-page admin-dashboard"><header className="admin-topbar"><div><span className="admin-kicker">techsoc / control room</span><h1>Content desk.</h1></div><div className="admin-account"><span>{admin.email} · {admin.role}</span><button onClick={logout}><LogOut size={15} /> Sign out</button></div></header><div className="admin-tabs">{visibleTabs.map((item) => <button className={tab === item ? 'active' : ''} key={item} onClick={() => switchTab(item)}>{item === 'hero' ? 'hero asset' : item === 'admins' ? 'team access' : item}{item === 'inbox' ? <b>{messages.length}</b> : isContentTab(item) ? <b>{data[item].length}</b> : null}</button>)}<a href="/">View public site ↗</a></div>{notice && <div className="admin-notice">{notice}<button onClick={() => setNotice('')}><X size={14} /></button></div>}{tab === 'hero' ? <HeroAsset value={heroAsset} onChange={setHeroAsset} onSave={saveHero} /> : tab === 'inbox' ? <Inbox messages={messages} onRefresh={refreshMessages} /> : tab === 'admins' ? <TeamAccess /> : <ContentPanel tab={tab} data={data} editing={editing} setEditing={setEditing} onDelete={remove} onSaved={() => { setEditing(null); setNotice('Saved.'); refresh() }} onRefresh={refresh} />}<PasswordChange notify={setNotice} /></main>
 }
 
 function PasswordChange({ notify }: { notify: (message: string) => void }) {
@@ -291,6 +295,32 @@ function renderField(key: string, value: string, set: (key: string, value: strin
 
 function AssetUploader({ onUploaded }: { onUploaded: (path: string) => void }) { const upload = async (file: File) => { const data = new FormData(); data.set('file', file); const response = await fetch('/api/upload', { method: 'POST', body: data }); const result = await response.json(); if (response.ok) onUploaded(result.path) }; return <label className="asset-drop"><ImagePlus size={22} /><span><strong>Choose an asset</strong><small>Images, MP4, GLB, or GLTF · max 25MB</small></span><Upload size={17} /><input type="file" accept="image/*,video/mp4,.glb,.gltf" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file) }} /></label> }
 
-function Inbox({ messages, onRefresh }: { messages: AdminRecord[]; onRefresh: () => void }) {
-  return <section className="admin-inbox admin-panel"><div className="admin-list-head"><div><span className="admin-kicker">Contact form</span><h2>Inbox <b className="admin-count">{messages.length}</b></h2></div><button className="admin-secondary" onClick={onRefresh}>Refresh</button></div>{messages.length ? messages.map((message) => <article className="inbox-message" key={message.id}><div><strong>{String(message.name)}</strong><a href={`mailto:${String(message.email)}`}>{String(message.email)}</a><small>{String(message.created_at || '')}</small></div><span>{String(message.involvement || 'General inquiry')}</span><p>{String(message.message)}</p></article>) : <div className="admin-empty">No messages yet.</div>}</section>
+function TeamAccess() {
+  const [accounts, setAccounts] = useState<{ id: number; email: string; role: string }[]>([])
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('editor')
+  const [error, setError] = useState('')
+  const load = useCallback(() => {
+    fetch('/api/admins').then((response) => (response.ok ? response.json() : [])).then(setAccounts).catch(() => {})
+  }, [])
+  useEffect(() => { load() }, [load])
+  const invite = async (event: FormEvent) => {
+    event.preventDefault(); setError('')
+    const response = await fetch('/api/admins', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ email, password, role }) })
+    const result = await response.json().catch(() => ({})) as { error?: string }
+    if (!response.ok) { setError(result.error ?? 'Could not invite'); return }
+    setEmail(''); setPassword(''); load()
+  }
+  const remove = async (id: number) => {
+    if (!window.confirm('Remove this account?')) return
+    const response = await fetch('/api/admins', { method: 'DELETE', headers: jsonHeaders, body: JSON.stringify({ id }) })
+    const result = await response.json().catch(() => ({})) as { error?: string }
+    if (!response.ok) { setError(result.error ?? 'Could not remove'); return }
+    load()
+  }
+  return <section className="admin-inbox admin-panel"><div className="admin-list-head"><div><span className="admin-kicker">Accounts</span><h2>Team access</h2></div></div>{accounts.map((a) => <div className="admin-row" key={a.id}><div><span className="admin-row-mark">✳</span><div><strong>{a.email}</strong><small>{a.role}</small></div></div><span className="admin-row-date" /><div className="admin-row-actions"><button onClick={() => remove(a.id)} aria-label={`Remove ${a.email}`}><Trash2 size={15} /></button></div></div>)}{!accounts.length && <div className="admin-empty">No accounts yet.</div>}<form className="admin-form" onSubmit={invite}><label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required /></label><label>Password (8+ characters)<input value={password} onChange={(event) => setPassword(event.target.value)} type="password" required minLength={8} autoComplete="new-password" /></label><label>Role<select value={role} onChange={(event) => setRole(event.target.value)}><option value="editor">editor — content only</option><option value="admin">admin — full access</option></select></label>{error && <p className="admin-error">{error}</p>}<button className="admin-primary">Invite</button></form></section>
+}
+
+function Inbox({ messages, onRefresh }: { messages: AdminRecord[]; onRefresh: () => void }) {  return <section className="admin-inbox admin-panel"><div className="admin-list-head"><div><span className="admin-kicker">Contact form</span><h2>Inbox <b className="admin-count">{messages.length}</b></h2></div><button className="admin-secondary" onClick={onRefresh}>Refresh</button></div>{messages.length ? messages.map((message) => <article className="inbox-message" key={message.id}><div><strong>{String(message.name)}</strong><a href={`mailto:${String(message.email)}`}>{String(message.email)}</a><small>{String(message.created_at || '')}</small></div><span>{String(message.involvement || 'General inquiry')}</span><p>{String(message.message)}</p></article>) : <div className="admin-empty">No messages yet.</div>}</section>
 }

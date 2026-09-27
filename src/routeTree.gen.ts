@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ApiAdminContentRouteImport } from './routes/api/admin-content'
+import { Route as ApiAdminsRouteImport } from './routes/api/admins'
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as ApiContactRouteImport } from './routes/api/contact'
 import { Route as ApiContentRouteImport } from './routes/api/content'
@@ -35,6 +36,11 @@ const AdminRoute = AdminRouteImport.update({
 const ApiAdminContentRoute = ApiAdminContentRouteImport.update({
   id: '/api/admin-content',
   path: '/api/admin-content',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminsRoute = ApiAdminsRouteImport.update({
+  id: '/api/admins',
+  path: '/api/admins',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthRoute = ApiAuthRouteImport.update({
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/api/admin-content': typeof ApiAdminContentRoute
+  '/api/admins': typeof ApiAdminsRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/contact': typeof ApiContactRoute
   '/api/content': typeof ApiContentRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/api/admin-content': typeof ApiAdminContentRoute
+  '/api/admins': typeof ApiAdminsRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/contact': typeof ApiContactRoute
   '/api/content': typeof ApiContentRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/api/admin-content': typeof ApiAdminContentRoute
+  '/api/admins': typeof ApiAdminsRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/contact': typeof ApiContactRoute
   '/api/content': typeof ApiContentRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/api/admin-content'
+    | '/api/admins'
     | '/api/auth'
     | '/api/contact'
     | '/api/content'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/api/admin-content'
+    | '/api/admins'
     | '/api/auth'
     | '/api/contact'
     | '/api/content'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/api/admin-content'
+    | '/api/admins'
     | '/api/auth'
     | '/api/contact'
     | '/api/content'
@@ -175,6 +187,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   ApiAdminContentRoute: typeof ApiAdminContentRoute
+  ApiAdminsRoute: typeof ApiAdminsRoute
   ApiAuthRoute: typeof ApiAuthRoute
   ApiContactRoute: typeof ApiContactRoute
   ApiContentRoute: typeof ApiContentRoute
@@ -207,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admin-content'
       fullPath: '/api/admin-content'
       preLoaderRoute: typeof ApiAdminContentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admins': {
+      id: '/api/admins'
+      path: '/api/admins'
+      fullPath: '/api/admins'
+      preLoaderRoute: typeof ApiAdminsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth': {
@@ -279,6 +299,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   ApiAdminContentRoute: ApiAdminContentRoute,
+  ApiAdminsRoute: ApiAdminsRoute,
   ApiAuthRoute: ApiAuthRoute,
   ApiContactRoute: ApiContactRoute,
   ApiContentRoute: ApiContentRoute,
