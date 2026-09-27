@@ -46,6 +46,7 @@ function Dashboard({ admin, onLogout }: { admin: AdminSession; onLogout: () => v
   const [editing, setEditing] = useState<AdminRecord | null>(null)
   const [notice, setNotice] = useState('')
   const [heroAsset, setHeroAsset] = useState('')
+  const [announcement, setAnnouncement] = useState({ enabled: false, text: '', link: '' })
   const [messages, setMessages] = useState<AdminRecord[]>([])
   const refresh = () => fetch('/api/admin-content').then((response) => response.json()).then(setData)
   const refreshMessages = () => fetch('/api/contact').then((response) => response.ok ? response.json() : []).then(setMessages).catch(() => {})
@@ -62,13 +63,26 @@ function Dashboard({ admin, onLogout }: { admin: AdminSession; onLogout: () => v
   }, [])
   useEffect(() => {
     if (tab !== 'hero' || heroAsset) return
-    fetch('/api/settings').then((response) => response.ok ? response.json() : null).then((settings) => { if (settings?.hero_asset) setHeroAsset(settings.hero_asset) }).catch(() => {})
+    fetch('/api/settings').then((response) => response.ok ? response.json() : null).then((settings) => {
+      if (settings?.hero_asset) setHeroAsset(settings.hero_asset)
+      if (settings?.announcement && typeof settings.announcement === 'object') {
+        setAnnouncement({
+          enabled: !!settings.announcement.enabled,
+          text: String(settings.announcement.text ?? ''),
+          link: String(settings.announcement.link ?? ''),
+        })
+      }
+    }).catch(() => {})
   }, [tab])
   const logout = async () => { await fetch('/api/auth', { method: 'DELETE' }); onLogout() }
   const remove = async (type: ContentTab, id: number) => { if (!window.confirm('Delete this item?')) return; await fetch('/api/admin-content', { method: 'DELETE', headers: jsonHeaders, body: JSON.stringify({ type, id }) }); setNotice('Deleted.'); refresh() }
-  const saveHero = async () => { if (!heroAsset) return; await fetch('/api/settings', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ hero_asset: heroAsset }) }); setNotice('Homepage hero asset saved.') }
+  const saveHero = async () => {
+    if (!heroAsset && !announcement.text) return
+    await fetch('/api/settings', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ hero_asset: heroAsset, announcement }) })
+    setNotice('Homepage hero asset saved.')
+  }
   const switchTab = (next: Tab) => { setTab(next); setEditing(null) }
-  return <main className="admin-page admin-dashboard"><header className="admin-topbar"><div><span className="admin-kicker">techsoc / control room</span><h1>Content desk.</h1></div><div className="admin-account"><span>{admin.email} · {admin.role}</span><button onClick={logout}><LogOut size={15} /> Sign out</button></div></header><div className="admin-tabs">{visibleTabs.map((item) => <button className={tab === item ? 'active' : ''} key={item} onClick={() => switchTab(item)}>{item === 'hero' ? 'hero asset' : item === 'admins' ? 'team access' : item}{item === 'inbox' ? <b>{messages.length}</b> : isContentTab(item) ? <b>{data[item].length}</b> : null}</button>)}<a href="/">View public site ↗</a></div>{notice && <div className="admin-notice">{notice}<button onClick={() => setNotice('')}><X size={14} /></button></div>}{tab === 'hero' ? <HeroAsset value={heroAsset} onChange={setHeroAsset} onSave={saveHero} /> : tab === 'inbox' ? <Inbox messages={messages} onRefresh={refreshMessages} /> : tab === 'admins' ? <TeamAccess /> : <ContentPanel tab={tab} data={data} editing={editing} setEditing={setEditing} onDelete={remove} onSaved={() => { setEditing(null); setNotice('Saved.'); refresh() }} onRefresh={refresh} />}<PasswordChange notify={setNotice} /></main>
+  return <main className="admin-page admin-dashboard"><header className="admin-topbar"><div><span className="admin-kicker">techsoc / control room</span><h1>Content desk.</h1></div><div className="admin-account"><span>{admin.email} · {admin.role}</span><button onClick={logout}><LogOut size={15} /> Sign out</button></div></header><div className="admin-tabs">{visibleTabs.map((item) => <button className={tab === item ? 'active' : ''} key={item} onClick={() => switchTab(item)}>{item === 'hero' ? 'hero asset' : item === 'admins' ? 'team access' : item}{item === 'inbox' ? <b>{messages.length}</b> : isContentTab(item) ? <b>{data[item].length}</b> : null}</button>)}<a href="/">View public site ↗</a></div>{notice && <div className="admin-notice">{notice}<button onClick={() => setNotice('')}><X size={14} /></button></div>}{tab === 'hero' ? <HeroAsset value={heroAsset} onChange={setHeroAsset} onSave={saveHero} announcement={announcement} onAnnouncement={setAnnouncement} /> : tab === 'inbox' ? <Inbox messages={messages} onRefresh={refreshMessages} /> : tab === 'admins' ? <TeamAccess /> : <ContentPanel tab={tab} data={data} editing={editing} setEditing={setEditing} onDelete={remove} onSaved={() => { setEditing(null); setNotice('Saved.'); refresh() }} onRefresh={refresh} />}<PasswordChange notify={setNotice} /></main>
 }
 
 function PasswordChange({ notify }: { notify: (message: string) => void }) {
@@ -92,8 +106,15 @@ function ContentPanel({ tab, data, editing, setEditing, onDelete, onSaved, onRef
   return <section className="admin-layout"><div className="admin-list"><div className="admin-list-head"><div><span className="admin-kicker">Published content</span><h2>{tab}</h2></div><button className="admin-secondary" onClick={() => setEditing({ id: 0 })}><Plus size={16} /> Add {singular(tab)}</button></div>{data[tab].map((record) => <AdminRow key={record.id} record={record} onEdit={() => setEditing(record)} onDelete={() => onDelete(tab, record.id)} />)}{!data[tab].length && <div className="admin-empty">Nothing here yet. Add your first {singular(tab)}.</div>}</div>{editing && <Editor type={tab} initial={editing} onClose={() => setEditing(null)} onSaved={onSaved} onRefresh={onRefresh} />}</section>
 }
 
-function HeroAsset({ value, onChange, onSave }: { value: string; onChange: (value: string) => void; onSave: () => void }) {
-  return <section className="admin-assets admin-panel"><div><span className="admin-kicker">Visual assets</span><h2>Homepage Blender / hero asset</h2><p className="admin-muted">Upload an image, MP4, or GLB file, then save its public path for the homepage hero. The homepage picks this up on its next load.</p>{value && <p className="admin-muted">Currently serving <code>{value}</code></p>}</div><AssetUploader onUploaded={onChange} /><div className="asset-save"><input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Uploaded asset path" /><button className="admin-primary" onClick={onSave} disabled={!value}><Save size={15} /> Save hero asset</button></div></section>
+function HeroAsset({ value, onChange, onSave, announcement, onAnnouncement }: {
+  value: string
+  onChange: (value: string) => void
+  onSave: () => void
+  announcement: { enabled: boolean; text: string; link: string }
+  onAnnouncement: (value: { enabled: boolean; text: string; link: string }) => void
+}) {
+  const setA = (patch: Partial<{ enabled: boolean; text: string; link: string }>) => onAnnouncement({ ...announcement, ...patch })
+  return <section className="admin-assets admin-panel"><div><span className="admin-kicker">Visual assets</span><h2>Homepage Blender / hero asset</h2><p className="admin-muted">Upload an image, MP4, or GLB file, then save its public path for the homepage hero. The homepage picks this up on its next load.</p>{value && <p className="admin-muted">Currently serving <code>{value}</code></p>}<h2>Announcement banner</h2><p className="admin-muted">Shown above the header until dismissed. Leave the text empty to hide it.</p></div><AssetUploader onUploaded={onChange} /><div className="asset-save"><input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Uploaded asset path" /><button className="admin-primary" onClick={onSave} disabled={!value && !announcement.text}><Save size={15} /> Save hero asset</button></div><div className="asset-save"><label className="admin-muted"><input type="checkbox" checked={announcement.enabled} onChange={(event) => setA({ enabled: event.target.checked })} /> Enabled</label><input value={announcement.text} onChange={(event) => setA({ text: event.target.value })} placeholder="Banner text" /><input value={announcement.link} onChange={(event) => setA({ link: event.target.value })} placeholder="Link URL (optional)" /></div></section>
 }
 
 function AdminRow({ record, onEdit, onDelete }: { record: AdminRecord; onEdit: () => void; onDelete: () => void }) { const thumb = [record.image_path, record.cover_image_path, record.logo_path].find((v) => typeof v === 'string' && v) as string | undefined; return <div className="admin-row"><div>{thumb ? <img src={thumb} alt="" /> : <span className="admin-row-mark">✳</span>}<div><strong>{String(record.name || record.title || 'Untitled')}</strong><small>{String(record.role || record.kind || record.tier || record.caption || 'Published content')}</small></div></div><span className="admin-row-date">{String(record.starts_at || record.created_at || '')}</span><div className="admin-row-actions"><button onClick={onEdit} aria-label="Edit"><Pencil size={15} /></button><button onClick={onDelete} aria-label="Delete"><Trash2 size={15} /></button></div></div> }

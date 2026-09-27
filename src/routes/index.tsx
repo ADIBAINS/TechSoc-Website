@@ -132,6 +132,16 @@ function HomePage() {
   const memories = (content.memories.length ? content.memories : fallbackMemories).map((memory) => ({ ...memory, media: memory.media?.length ? memory.media : collectMedia([{ path: memory.image_path, caption: memory.caption }]) }))
   const totalMedia = memories.reduce((total, memory) => total + (memory.media?.length ?? 0), 0)
   const heroAsset = content.settings?.hero_asset || heroImage
+  const announcement = content.settings?.announcement as unknown as { enabled?: boolean; text?: string; link?: string } | undefined
+  const [announceDismissed, setAnnounceDismissed] = useState(() => {
+    try { return window.localStorage.getItem('techsoc-announcement-dismissed') || '' } catch { return '' }
+  })
+  const showAnnouncement = !!announcement?.enabled && !!announcement?.text && announceDismissed !== announcement.text
+  const dismissAnnouncement = () => {
+    if (!announcement?.text) return
+    try { window.localStorage.setItem('techsoc-announcement-dismissed', announcement.text) } catch {}
+    setAnnounceDismissed(announcement.text)
+  }
   const heroIsVideo = /\.(mp4|webm|ogg)(\?.*)?$/i.test(heroAsset)
   const heroIsModel = /\.(glb|gltf)(\?.*)?$/i.test(heroAsset)
   useEffect(() => {
@@ -158,6 +168,7 @@ function HomePage() {
   return (
     <div className="reference-site">
       <div className={toast ? 'reference-toast is-visible' : 'reference-toast'} role="status" aria-live="polite"><span><Check size={16} /></span>{toast}</div>
+      {showAnnouncement && <div className="announce-bar" role="status"><span>{announcement!.text}</span>{announcement!.link && <a href={announcement!.link}>Learn more</a>}<button onClick={dismissAnnouncement} aria-label="Dismiss announcement"><X size={15} /></button></div>}
 
       <header className="reference-header">
         <div className="reference-nav-shell">
