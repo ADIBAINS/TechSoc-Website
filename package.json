@@ -10,13 +10,15 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "node --env-file=.env scripts/migrate-sqlite-to-postgres.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@tanstack/react-router": "^1.120.5",
     "@tanstack/react-start": "^1.120.5",
+    "@vercel/blob": "^2.8.0",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.7",
     "framer-motion": "^11.11.17",
     "lucide-react": "^0.468.0",
     "nitro": "^3.0.260903-beta",
