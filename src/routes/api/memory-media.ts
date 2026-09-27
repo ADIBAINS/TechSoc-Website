@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { authenticate, csrfBlock } from '../../server/auth.server'
-import { dbAll, dbGet, dbRun, dbInsertReturningId } from '../../server/db.server'
+import { dbAll, dbGet, dbRun, dbInsertReturningId, logAction } from '../../server/db.server'
 import { mediaKind } from '../../lib/media'
 import { memoryMediaCreateSchema, memoryMediaDeleteSchema, memoryMediaUpdateSchema, readJson } from '../../server/validate'
 
@@ -20,7 +20,8 @@ export const Route = createFileRoute('/api/memory-media')({
       POST: async ({ request }) => {
         const blocked = csrfBlock(request)
         if (blocked) return blocked
-        if (!(await authenticate(request))) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        const session = await authenticate(request)
+        if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const result = await readJson(request, memoryMediaCreateSchema)
         if ('error' in result) return result.error
         const { memory_id: memoryId, path, caption } = result.data
@@ -33,12 +34,14 @@ export const Route = createFileRoute('/api/memory-media')({
         const inserted = await dbInsertReturningId('insert into memory_media (memory_id, path, kind, caption, sort_order) values (?, ?, ?, ?, ?)', [memoryId, path, mediaKind(path), caption, next?.next ?? 0])
         // The first attachment doubles as the cover thumbnail for the grid card.
         if (!memory.image_path) await dbRun('update memories set image_path = ? where id = ?', [path, memoryId])
+        logAction(session.id, 'media.attach', 'memory_media', Number(inserted.lastInsertRowid))
         return Response.json({ id: Number(inserted.lastInsertRowid), media: await listMedia(memoryId) }, { status: 201 })
       },
       PUT: async ({ request }) => {
         const blocked = csrfBlock(request)
         if (blocked) return blocked
-        if (!(await authenticate(request))) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        const session = await authenticate(request)
+        if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const result = await readJson(request, memoryMediaUpdateSchema)
         if ('error' in result) return result.error
         const { id, caption, sort_order } = result.data
@@ -47,15 +50,18 @@ export const Route = createFileRoute('/api/memory-media')({
         if (typeof caption === 'string') { fields.push('caption = ?'); values.push(caption) }
         if (typeof sort_order === 'number') { fields.push('sort_order = ?'); values.push(sort_order) }
         await dbRun(`update memory_media set ${fields.join(', ')} where id = ?`, [...values, id])
+        logAction(session.id, 'media.update', 'memory_media', id)
         return Response.json({ ok: true })
       },
       DELETE: async ({ request }) => {
         const blocked = csrfBlock(request)
         if (blocked) return blocked
-        if (!(await authenticate(request))) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        const session = await authenticate(request)
+        if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const result = await readJson(request, memoryMediaDeleteSchema)
         if ('error' in result) return result.error
         await dbRun('delete from memory_media where id = ?', [result.data.id])
+        logAction(session.id, 'media.delete', 'memory_media', result.data.id)
         return Response.json({ ok: true })
       },
     },

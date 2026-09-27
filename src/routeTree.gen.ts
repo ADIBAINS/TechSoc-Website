@@ -17,6 +17,7 @@ import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as ApiContactRouteImport } from './routes/api/contact'
 import { Route as ApiContentRouteImport } from './routes/api/content'
 import { Route as ApiCronCleanupRouteImport } from './routes/api/cron-cleanup'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiMemoryMediaRouteImport } from './routes/api/memory-media'
 import { Route as ApiRsvpRouteImport } from './routes/api/rsvp'
 import { Route as ApiSettingsRouteImport } from './routes/api/settings'
@@ -63,6 +64,11 @@ const ApiCronCleanupRoute = ApiCronCleanupRouteImport.update({
   path: '/api/cron-cleanup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMemoryMediaRoute = ApiMemoryMediaRouteImport.update({
   id: '/api/memory-media',
   path: '/api/memory-media',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/api/contact': typeof ApiContactRoute
   '/api/content': typeof ApiContentRoute
   '/api/cron-cleanup': typeof ApiCronCleanupRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/memory-media': typeof ApiMemoryMediaRoute
   '/api/rsvp': typeof ApiRsvpRoute
   '/api/settings': typeof ApiSettingsRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/api/contact': typeof ApiContactRoute
   '/api/content': typeof ApiContentRoute
   '/api/cron-cleanup': typeof ApiCronCleanupRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/memory-media': typeof ApiMemoryMediaRoute
   '/api/rsvp': typeof ApiRsvpRoute
   '/api/settings': typeof ApiSettingsRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/api/contact': typeof ApiContactRoute
   '/api/content': typeof ApiContentRoute
   '/api/cron-cleanup': typeof ApiCronCleanupRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/memory-media': typeof ApiMemoryMediaRoute
   '/api/rsvp': typeof ApiRsvpRoute
   '/api/settings': typeof ApiSettingsRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/api/contact'
     | '/api/content'
     | '/api/cron-cleanup'
+    | '/api/health'
     | '/api/memory-media'
     | '/api/rsvp'
     | '/api/settings'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/api/contact'
     | '/api/content'
     | '/api/cron-cleanup'
+    | '/api/health'
     | '/api/memory-media'
     | '/api/rsvp'
     | '/api/settings'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/api/contact'
     | '/api/content'
     | '/api/cron-cleanup'
+    | '/api/health'
     | '/api/memory-media'
     | '/api/rsvp'
     | '/api/settings'
@@ -192,6 +204,7 @@ export interface RootRouteChildren {
   ApiContactRoute: typeof ApiContactRoute
   ApiContentRoute: typeof ApiContentRoute
   ApiCronCleanupRoute: typeof ApiCronCleanupRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiMemoryMediaRoute: typeof ApiMemoryMediaRoute
   ApiRsvpRoute: typeof ApiRsvpRoute
   ApiSettingsRoute: typeof ApiSettingsRoute
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronCleanupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/memory-media': {
       id: '/api/memory-media'
       path: '/api/memory-media'
@@ -304,6 +324,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiContactRoute: ApiContactRoute,
   ApiContentRoute: ApiContentRoute,
   ApiCronCleanupRoute: ApiCronCleanupRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiMemoryMediaRoute: ApiMemoryMediaRoute,
   ApiRsvpRoute: ApiRsvpRoute,
   ApiSettingsRoute: ApiSettingsRoute,

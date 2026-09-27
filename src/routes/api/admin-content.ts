@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { authenticate, csrfBlock } from '../../server/auth.server'
-import { dbAll, dbGet, dbRun, dbInsertReturningId, type SqlValue } from '../../server/db.server'
+import { dbAll, dbRun, dbInsertReturningId, logAction, type SqlValue } from '../../server/db.server'
 import { adminCreateSchema, adminDeleteSchema, adminUpdateSchema, readJson } from '../../server/validate'
 
 const tables = {
@@ -43,32 +43,37 @@ export const Route = createFileRoute('/api/admin-content')({
       POST: async ({ request }) => {
         const blocked = csrfBlock(request)
         if (blocked) return blocked
-        if (!(await authenticate(request))) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        const session = await authenticate(request)
+        if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const result = await readJson(request, adminCreateSchema)
         if ('error' in result) return result.error
         const { type: kind, data } = result.data
         const { fields, values } = pickedFields(kind, data as Record<string, unknown>)
         if (!fields.length) return Response.json({ error: 'No fields supplied' }, { status: 400 })
         const inserted = await dbInsertReturningId(`insert into ${tables[kind].name} (${fields.join(', ')}) values (${fields.map(() => '?').join(', ')})`, values)
+        logAction(session.id, 'content.create', tables[kind].name, Number(inserted.lastInsertRowid))
         // id last: a client-supplied id in the payload must not shadow the real one
         return Response.json({ ...(data as Record<string, unknown>), id: Number(inserted.lastInsertRowid) })
       },
       PUT: async ({ request }) => {
         const blocked = csrfBlock(request)
         if (blocked) return blocked
-        if (!(await authenticate(request))) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        const session = await authenticate(request)
+        if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const result = await readJson(request, adminUpdateSchema)
         if ('error' in result) return result.error
         const { type: kind, id, data } = result.data
         const { fields, values } = pickedFields(kind, data as Record<string, unknown>)
         if (!fields.length) return Response.json({ error: 'No fields supplied' }, { status: 400 })
         await dbRun(`update ${tables[kind].name} set ${fields.map((field) => `${field} = ?`).join(', ')} where id = ?`, [...values, id])
+        logAction(session.id, 'content.update', tables[kind].name, id)
         return Response.json({ ok: true })
       },
       DELETE: async ({ request }) => {
         const blocked = csrfBlock(request)
         if (blocked) return blocked
-        if (!(await authenticate(request))) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        const session = await authenticate(request)
+        if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const result = await readJson(request, adminDeleteSchema)
         if ('error' in result) return result.error
         const { type: kind, id } = result.data
@@ -81,6 +86,7 @@ export const Route = createFileRoute('/api/admin-content')({
           await dbRun('delete from memory_media where memory_id = ?', [id])
         }
         await dbRun(`delete from ${tables[kind].name} where id = ?`, [id])
+        logAction(session.id, 'content.delete', tables[kind].name, id)
         return Response.json({ ok: true })
       },
     },

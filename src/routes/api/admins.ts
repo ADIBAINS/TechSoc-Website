@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { createFileRoute } from '@tanstack/react-router'
 import { csrfBlock, requireAdmin } from '../../server/auth.server'
-import { dbAll, dbGet, dbInsertReturningId, dbRun } from '../../server/db.server'
+import { dbAll, dbGet, dbInsertReturningId, dbRun, logAction } from '../../server/db.server'
 import { adminInviteSchema, adminRemoveSchema, readJson } from '../../server/validate'
 
 /**
@@ -34,6 +34,7 @@ export const Route = createFileRoute('/api/admins')({
           bcrypt.hashSync(password, 12),
           role,
         ])
+        logAction(session.id, 'admin.invite', 'admins', Number(inserted.lastInsertRowid))
         return Response.json({ id: Number(inserted.lastInsertRowid), email, role }, { status: 201 })
       },
       DELETE: async ({ request }) => {
@@ -45,6 +46,7 @@ export const Route = createFileRoute('/api/admins')({
         if ('error' in result) return result.error
         if (result.data.id === session.id) return Response.json({ error: 'You cannot remove yourself' }, { status: 400 })
         await dbRun('delete from admins where id = ?', [result.data.id])
+        logAction(session.id, 'admin.remove', 'admins', result.data.id)
         return Response.json({ ok: true })
       },
     },

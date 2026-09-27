@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { createFileRoute } from '@tanstack/react-router'
 import { clearSession, createSession, authenticate, sessionCookie, csrfBlock } from '../../server/auth.server'
-import { dbGet, dbRun, ensureAdmin } from '../../server/db.server'
+import { dbGet, dbRun, ensureAdmin, logAction } from '../../server/db.server'
 import { checkRateLimit, clientIp, rateLimitResponse } from '../../server/ratelimit'
 import { loginSchema, passwordChangeSchema, readJson } from '../../server/validate'
 
@@ -26,6 +26,7 @@ export const Route = createFileRoute('/api/auth')({
         )
         if (!admin || !bcrypt.compareSync(password, admin.password_hash)) return Response.json({ error: 'Invalid email or password' }, { status: 401 })
         const session = await createSession(admin.id)
+        logAction(admin.id, 'login')
         return new Response(JSON.stringify({ admin: { id: admin.id, email: admin.email, role: admin.role || 'admin' } }), { headers: { 'content-type': 'application/json', 'set-cookie': sessionCookie(session.token, session.expires) } })
       },
       DELETE: async ({ request }) => {
@@ -48,6 +49,7 @@ export const Route = createFileRoute('/api/auth')({
           return Response.json({ error: 'Current password is incorrect' }, { status: 403 })
         }
         await dbRun('update admins set password_hash = ? where id = ?', [bcrypt.hashSync(newPassword, 12), session.id])
+        logAction(session.id, 'password-change')
         return Response.json({ ok: true })
       },
     },

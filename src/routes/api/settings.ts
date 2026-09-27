@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { authenticate, csrfBlock, requireAdmin } from '../../server/auth.server'
-import { dbAll, dbRun } from '../../server/db.server'
+import { dbAll, dbRun, logAction } from '../../server/db.server'
 import { readJson, settingsSchema } from '../../server/validate'
 
 export const Route = createFileRoute('/api/settings')({
@@ -16,7 +16,8 @@ export const Route = createFileRoute('/api/settings')({
         const blocked = csrfBlock(request)
         if (blocked) return blocked
         // Site settings (incl. hero asset) are admin-only; editors keep content CRUD.
-        if (!(await requireAdmin(request))) return Response.json({ error: 'Admins only' }, { status: 403 })
+        const session = await requireAdmin(request)
+        if (!session) return Response.json({ error: 'Admins only' }, { status: 403 })
         const result = await readJson(request, settingsSchema)
         if ('error' in result) return result.error
         for (const [key, value] of Object.entries(result.data)) {
@@ -25,6 +26,7 @@ export const Route = createFileRoute('/api/settings')({
             [key, JSON.stringify(value)],
           )
         }
+        logAction(session.id, 'settings.update')
         return Response.json({ ok: true })
       },
     },

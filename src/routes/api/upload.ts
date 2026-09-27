@@ -3,7 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs/promises'
 import { createFileRoute } from '@tanstack/react-router'
 import { authenticate, csrfBlock } from '../../server/auth.server'
-import { uploadDir, useBlob } from '../../server/db.server'
+import { uploadDir, useBlob, logAction } from '../../server/db.server'
 
 const extensions: Record<string, string> = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif', 'video/mp4': '.mp4', 'model/gltf-binary': '.glb', 'model/gltf+json': '.gltf' }
 const contentTypes: Record<string, string> = { '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.mp4': 'video/mp4', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json' }
@@ -34,7 +34,8 @@ export const Route = createFileRoute('/api/upload')({
       POST: async ({ request }) => {
         const blocked = csrfBlock(request)
         if (blocked) return blocked
-        if (!(await authenticate(request))) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        const session = await authenticate(request)
+        if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
         const form = await request.formData()
         const file = form.get('file')
         if (!(file instanceof File)) return Response.json({ error: 'A file is required' }, { status: 400 })
@@ -56,12 +57,14 @@ export const Route = createFileRoute('/api/upload')({
             access: 'public',
             contentType: contentTypes[extension] ?? file.type,
           })
+          logAction(session.id, 'upload', undefined, undefined)
           return Response.json({ path: blob.url, filename })
         }
 
         // Local dev: write to ./uploads (or /tmp/uploads on Vercel without Blob).
         await fs.mkdir(uploadDir, { recursive: true })
         await fs.writeFile(path.join(uploadDir, filename), buffer)
+        logAction(session.id, 'upload', undefined, undefined)
         return Response.json({ path: `/api/uploads/${filename}`, filename })
       },
     },
