@@ -88,12 +88,24 @@ export async function dbRun(sql: string, params: SqlValue[] = []): Promise<{ las
   if (isPostgres) {
     await ensurePostgresSchema()
     const { neonQuery } = await import('./pg-query')
+    await neonQuery(toPostgres(sql), params)
+    return { lastInsertRowid: 0 }
+  }
+  const result = getSqlite().prepare(sql).run(...params)
+  return { lastInsertRowid: Number(result.lastInsertRowid) }
+}
+
+/**
+ * INSERT that needs the new row's id (members/events/memories/memory_media).
+ * Do NOT use for tables without an `id` column (sessions, site_settings).
+ */
+export async function dbInsertReturningId(sql: string, params: SqlValue[] = []): Promise<{ lastInsertRowid: number }> {
+  if (isPostgres) {
+    await ensurePostgresSchema()
+    const { neonQuery } = await import('./pg-query')
     const trimmed = sql.trim().toLowerCase()
-    const needsReturning = trimmed.startsWith('insert') && !trimmed.includes('returning')
-    const rows = await neonQuery<{ id: number }>(
-      needsReturning ? `${toPostgres(sql)} RETURNING id` : toPostgres(sql),
-      params,
-    )
+    const finalSql = trimmed.includes('returning') ? toPostgres(sql) : `${toPostgres(sql)} RETURNING id`
+    const rows = await neonQuery<{ id: number }>(finalSql, params)
     return { lastInsertRowid: Number(rows[0]?.id ?? 0) }
   }
   const result = getSqlite().prepare(sql).run(...params)

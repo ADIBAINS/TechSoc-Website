@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { authenticate } from '../../server/auth.server'
-import { dbAll, dbRun, type SqlValue } from '../../server/db.server'
+import { dbAll, dbRun, dbInsertReturningId, type SqlValue } from '../../server/db.server'
 
 const tables = {
   members: { name: 'members', order: 'sort_order asc, created_at desc' },
@@ -45,7 +45,7 @@ export const Route = createFileRoute('/api/admin-content')({
         if (!kind || !body.data) return Response.json({ error: 'Invalid content payload' }, { status: 400 })
         const { fields, values } = pickedFields(kind, body.data)
         if (!fields.length) return Response.json({ error: 'No fields supplied' }, { status: 400 })
-        const result = await dbRun(`insert into ${tables[kind].name} (${fields.join(', ')}) values (${fields.map(() => '?').join(', ')})`, values)
+        const result = await dbInsertReturningId(`insert into ${tables[kind].name} (${fields.join(', ')}) values (${fields.map(() => '?').join(', ')})`, values)
         // id last: a client-supplied id in the payload must not shadow the real one
         return Response.json({ ...body.data, id: Number(result.lastInsertRowid) })
       },

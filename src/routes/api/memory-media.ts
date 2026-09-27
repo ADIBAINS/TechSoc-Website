@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { authenticate } from '../../server/auth.server'
-import { dbAll, dbGet, dbRun } from '../../server/db.server'
+import { dbAll, dbGet, dbRun, dbInsertReturningId } from '../../server/db.server'
 import { mediaKind } from '../../lib/media'
 
 function listMedia(memoryId: number) {
@@ -28,7 +28,7 @@ export const Route = createFileRoute('/api/memory-media')({
           return Response.json({ error: 'That media is already attached' }, { status: 409 })
         }
         const next = await dbGet<{ next: number }>('select coalesce(max(sort_order), -1) + 1 as next from memory_media where memory_id = ?', [memoryId])
-        const result = await dbRun('insert into memory_media (memory_id, path, kind, caption, sort_order) values (?, ?, ?, ?, ?)', [memoryId, path, mediaKind(path), body.caption?.trim() ?? '', next?.next ?? 0])
+        const result = await dbInsertReturningId('insert into memory_media (memory_id, path, kind, caption, sort_order) values (?, ?, ?, ?, ?)', [memoryId, path, mediaKind(path), body.caption?.trim() ?? '', next?.next ?? 0])
         // The first attachment doubles as the cover thumbnail for the grid card.
         if (!memory.image_path) await dbRun('update memories set image_path = ? where id = ?', [path, memoryId])
         return Response.json({ id: Number(result.lastInsertRowid), media: await listMedia(memoryId) }, { status: 201 })
