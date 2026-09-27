@@ -7,6 +7,7 @@ const tables = {
   members: { name: 'members', order: 'sort_order asc, created_at desc' },
   events: { name: 'events', order: 'starts_at asc, created_at desc' },
   memories: { name: 'memories', order: 'sort_order asc, created_at desc' },
+  sponsors: { name: 'sponsors', order: 'sort_order asc, created_at desc' },
 } as const
 type ContentType = keyof typeof tables
 
@@ -14,6 +15,7 @@ const columns: Record<ContentType, string[]> = {
   members: ['name', 'role', 'bio', 'image_path', 'github_url', 'linkedin_url', 'portfolio_url', 'sort_order', 'published'],
   events: ['title', 'kind', 'description', 'starts_at', 'location', 'registration_url', 'cover_image_path', 'published'],
   memories: ['title', 'caption', 'image_path', 'event_id', 'sort_order', 'published'],
+  sponsors: ['name', 'logo_path', 'url', 'tier', 'sort_order', 'published'],
 }
 
 async function allContent() {

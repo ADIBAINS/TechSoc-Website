@@ -33,7 +33,7 @@ export const Route = createFileRoute('/api/content')({
           ]),
         }))
 
-        return Response.json({ members: await read('members'), events, memories, settings })
+        return Response.json({ members: await read('members'), events, memories, sponsors: await dbAll('select * from sponsors where published = 1 order by sort_order asc, created_at desc'), settings })
       },
     },
   },

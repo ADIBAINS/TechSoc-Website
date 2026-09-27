@@ -6,16 +6,16 @@ import { EVENT_KINDS } from '../lib/eventKinds'
 export const Route = createFileRoute('/admin')({ component: Admin })
 
 type AdminRecord = Record<string, unknown> & { id: number }
-type AdminData = { members: AdminRecord[]; events: AdminRecord[]; memories: AdminRecord[] }
+type AdminData = { members: AdminRecord[]; events: AdminRecord[]; memories: AdminRecord[]; sponsors: AdminRecord[] }
 type MediaRow = { id: number; path: string; kind: string; caption: string; sort_order: number }
 type ContentTab = keyof AdminData
 type Tab = ContentTab | 'hero' | 'inbox'
-const contentTabs: ContentTab[] = ['members', 'events', 'memories']
+const contentTabs: ContentTab[] = ['members', 'events', 'memories', 'sponsors']
 const allTabs: Tab[] = [...contentTabs, 'hero', 'inbox']
-const emptyData: AdminData = { members: [], events: [], memories: [] }
+const emptyData: AdminData = { members: [], events: [], memories: [], sponsors: [] }
 const isContentTab = (tab: Tab): tab is ContentTab => (contentTabs as string[]).includes(tab)
 // Naive de-pluralising breaks on "memories" -> "memorie", so map it explicitly.
-const SINGULAR: Record<ContentTab, string> = { members: 'member', events: 'event', memories: 'memory' }
+const SINGULAR: Record<ContentTab, string> = { members: 'member', events: 'event', memories: 'memory', sponsors: 'sponsor' }
 const singular = (tab: ContentTab) => SINGULAR[tab]
 const jsonHeaders = { 'content-type': 'application/json' }
 
@@ -92,7 +92,7 @@ function HeroAsset({ value, onChange, onSave }: { value: string; onChange: (valu
   return <section className="admin-assets admin-panel"><div><span className="admin-kicker">Visual assets</span><h2>Homepage Blender / hero asset</h2><p className="admin-muted">Upload an image, MP4, or GLB file, then save its public path for the homepage hero. The homepage picks this up on its next load.</p>{value && <p className="admin-muted">Currently serving <code>{value}</code></p>}</div><AssetUploader onUploaded={onChange} /><div className="asset-save"><input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Uploaded asset path" /><button className="admin-primary" onClick={onSave} disabled={!value}><Save size={15} /> Save hero asset</button></div></section>
 }
 
-function AdminRow({ record, onEdit, onDelete }: { record: AdminRecord; onEdit: () => void; onDelete: () => void }) { return <div className="admin-row"><div>{typeof record.image_path === 'string' && record.image_path ? <img src={record.image_path} alt="" /> : typeof record.cover_image_path === 'string' && record.cover_image_path ? <img src={record.cover_image_path} alt="" /> : <span className="admin-row-mark">✳</span>}<div><strong>{String(record.name || record.title || 'Untitled')}</strong><small>{String(record.role || record.kind || record.caption || 'Published content')}</small></div></div><span className="admin-row-date">{String(record.starts_at || record.created_at || '')}</span><div className="admin-row-actions"><button onClick={onEdit} aria-label="Edit"><Pencil size={15} /></button><button onClick={onDelete} aria-label="Delete"><Trash2 size={15} /></button></div></div> }
+function AdminRow({ record, onEdit, onDelete }: { record: AdminRecord; onEdit: () => void; onDelete: () => void }) { const thumb = [record.image_path, record.cover_image_path, record.logo_path].find((v) => typeof v === 'string' && v) as string | undefined; return <div className="admin-row"><div>{thumb ? <img src={thumb} alt="" /> : <span className="admin-row-mark">✳</span>}<div><strong>{String(record.name || record.title || 'Untitled')}</strong><small>{String(record.role || record.kind || record.tier || record.caption || 'Published content')}</small></div></div><span className="admin-row-date">{String(record.starts_at || record.created_at || '')}</span><div className="admin-row-actions"><button onClick={onEdit} aria-label="Edit"><Pencil size={15} /></button><button onClick={onDelete} aria-label="Delete"><Trash2 size={15} /></button></div></div> }
 
 function FileDrop({ label, hint, accept, multiple, onFiles, disabled }: { label: string; hint: string; accept: string; multiple?: boolean; onFiles: (files: FileList | null) => void; disabled?: boolean }) {
   return (
@@ -212,7 +212,7 @@ function Editor({ type, initial, onClose, onSaved, onRefresh }: { type: ContentT
   const [files, setFiles] = useState<File[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const fields = type === 'members' ? [['name', 'Name'], ['role', 'Role'], ['bio', 'Bio'], ['github_url', 'GitHub URL'], ['linkedin_url', 'LinkedIn URL'], ['portfolio_url', 'Portfolio URL']] : type === 'events' ? [['title', 'Title'], ['kind', 'Kind'], ['description', 'Description'], ['starts_at', 'Starts at'], ['location', 'Location'], ['registration_url', 'Registration URL']] : [['title', 'Title'], ['caption', 'Caption']]
+  const fields = type === 'members' ? [['name', 'Name'], ['role', 'Role'], ['bio', 'Bio'], ['github_url', 'GitHub URL'], ['linkedin_url', 'LinkedIn URL'], ['portfolio_url', 'Portfolio URL']] : type === 'events' ? [['title', 'Title'], ['kind', 'Kind'], ['description', 'Description'], ['starts_at', 'Starts at'], ['location', 'Location'], ['registration_url', 'Registration URL']] : type === 'sponsors' ? [['name', 'Name'], ['tier', 'Tier'], ['url', 'Website URL']] : [['title', 'Title'], ['caption', 'Caption']]
   const set = (key: string, value: string) => setForm((current) => ({ ...current, [key]: value }))
   // A memory needs a cover to exist at all, so require one before it can be saved.
   const needsCover = type === 'memories' && !initial.id
@@ -237,6 +237,7 @@ function Editor({ type, initial, onClose, onSaved, onRefresh }: { type: ContentT
     }
     if (uploaded.length) {
       if (type === 'memories') values.image_path = uploaded[0]
+      else if (type === 'sponsors') values.logo_path = uploaded[0]
       else values[type === 'events' ? 'cover_image_path' : 'image_path'] = uploaded[0]
     }
 
@@ -264,8 +265,8 @@ function Editor({ type, initial, onClose, onSaved, onRefresh }: { type: ContentT
       ? initial.id
         ? <MemoryMedia memoryId={initial.id} coverPath={String(initial.image_path ?? form.image_path ?? '')} onChanged={onRefresh} />
         : <div className="media-manager"><div className="media-manager-head"><span className="admin-kicker">Media</span><b>{files.length ? `${files.length} selected` : 'none selected'}</b></div>{files.length > 0 && <ul className="media-manager-list">{files.map((item, index) => <li key={`${item.name}-${index}`}><span className="media-manager-index">{index + 1}</span>{item.type.startsWith('image/') ? <img src={URL.createObjectURL(item)} alt="" /> : <span className="media-manager-file">{item.type.startsWith('video/') ? 'MP4' : 'FILE'}</span>}<span className="media-manager-meta"><small title={item.name}>{item.name}</small><em>{(item.size / 1024).toFixed(0)} KB</em></span><span className="media-manager-actions"><button type="button" className="is-danger" onClick={() => setFiles((current) => current.filter((_, position) => position !== index))} aria-label={`Remove ${item.name}`} title="Remove"><Trash2 size={13} /></button></span></li>)}</ul>}<FileDrop label={files.length ? 'Add more media' : 'Add photos, clips, or 3D files'} hint="Images, MP4, GLB or GLTF · the first becomes the cover" accept="image/*,video/mp4,.glb,.gltf" multiple onFiles={(picked) => setFiles((current) => [...current, ...Array.from(picked ?? [])])} /><small className="admin-muted">Everything here is uploaded when you save. The first file becomes the cover image; the rest join the gallery.</small></div>
-      : <FileDrop label={files[0] ? files[0].name : 'Choose a cover file'} hint={type === 'events' ? 'Image or MP4 for the event card' : 'Profile photo shown on the homepage'} accept={type === 'events' ? 'image/*,video/mp4' : 'image/*'} onFiles={(picked) => setFiles(picked ? Array.from(picked).slice(0, 1) : [])} />}
-    {type !== 'memories' && (form.image_path || form.cover_image_path) && <small className="admin-muted">Current asset: {form.image_path || form.cover_image_path}</small>}
+      : <FileDrop label={files[0] ? files[0].name : 'Choose a cover file'} hint={type === 'events' ? 'Image or MP4 for the event card' : type === 'sponsors' ? 'Logo image shown on the homepage' : 'Profile photo shown on the homepage'} accept={type === 'events' ? 'image/*,video/mp4' : 'image/*'} onFiles={(picked) => setFiles(picked ? Array.from(picked).slice(0, 1) : [])} />}
+    {type !== 'memories' && (form.image_path || form.cover_image_path || form.logo_path) && <small className="admin-muted">Current asset: {form.image_path || form.cover_image_path || form.logo_path}</small>}
     {error && <p className="admin-error">{error}</p>}
     <button className="admin-primary" disabled={busy || missingCover}>{busy ? 'Saving…' : 'Save record'}</button>
   </form></aside>
@@ -283,6 +284,7 @@ function EventRsvps({ eventId }: { eventId: number }) {
 }
 
 function renderField(key: string, value: string, set: (key: string, value: string) => void) {  if (key === 'kind') return <select value={value || EVENT_KINDS[0].label} onChange={(event) => set(key, event.target.value)}>{EVENT_KINDS.map((option) => <option key={option.value} value={option.label}>{option.label}</option>)}</select>
+  if (key === 'tier') { const tiers = ['Title', 'Gold', 'Silver', 'Community']; return <select value={tiers.includes(value) ? value : 'Community'} onChange={(event) => set(key, event.target.value)}>{tiers.map((option) => <option key={option} value={option}>{option}</option>)}</select> }
   if (key === 'bio' || key === 'description' || key === 'caption') return <textarea value={value} onChange={(event) => set(key, event.target.value)} rows={4} />
   return <input value={value} onChange={(event) => set(key, event.target.value)} type={key === 'starts_at' ? 'datetime-local' : key.includes('url') ? 'url' : 'text'} required={key === 'name' || key === 'title'} />
 }

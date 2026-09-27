@@ -4,7 +4,7 @@ import { z } from 'zod'
 const email = z.string().trim().toLowerCase().email().max(254)
 const id = z.number().int().positive()
 const shortText = (max: number) => z.string().trim().max(max)
-const contentType = z.enum(['members', 'events', 'memories'])
+const contentType = z.enum(['members', 'events', 'memories', 'sponsors'])
 
 // POST /api/auth
 export const loginSchema = z.object({
@@ -37,7 +37,7 @@ export const adminCreateSchema = z
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'No fields supplied' })
       return
     }
-    const required = body.type === 'members' ? 'name' : 'title'
+    const required = body.type === 'members' || body.type === 'sponsors' ? 'name' : 'title'
     if (typeof data[required] !== 'string' || !(data[required] as string).trim()) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${required} is required` })
     }

@@ -174,3 +174,15 @@
 .rsvp-list ul{margin:9px 0 0;padding:0;list-style:none;display:grid;gap:7px}
 .rsvp-list li{display:flex;align-items:baseline;justify-content:space-between;gap:10px;color:var(--reference-silver);font-size:12px}
 .rsvp-list li small{color:var(--reference-muted);font-size:10px}
+
+/* Sponsors */
+.reference-sponsors{padding-block:112px}
+.sponsor-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;margin-top:48px}
+.sponsor-card{display:flex;min-width:0;flex-direction:column;align-items:center;gap:8px;padding:28px 20px;border:1px solid var(--reference-line);background:var(--reference-surface);text-align:center;transition:border-color .25s,transform .25s}
+.sponsor-card:hover{border-color:var(--reference-cyan);transform:translateY(-4px)}
+.sponsor-card img{max-width:100%;height:64px;object-fit:contain;filter:saturate(.8)}
+.sponsor-card>span{display:grid;width:64px;height:64px;place-items:center;background:#132126;color:var(--reference-cyan);font:700 30px 'Plus Jakarta Sans',sans-serif}
+.sponsor-card strong{color:var(--reference-silver);font-size:14px}
+.sponsor-card small{color:var(--reference-cyan);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+@media(max-width:960px){.sponsor-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.reference-sponsors{padding-block:78px}.sponsor-grid{gap:16px;margin-top:32px}}

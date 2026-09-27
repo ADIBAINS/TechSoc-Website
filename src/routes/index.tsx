@@ -56,7 +56,8 @@ type EventItem = {
 }
 
 type Memory = { id: number; title: string; caption?: string; image_path?: string; media?: MediaItem[] }
-type Content = { members: Member[]; events: EventItem[]; memories: Memory[]; settings?: Record<string, string> }
+type Sponsor = { id: number; name: string; logo_path?: string; url?: string; tier?: string }
+type Content = { members: Member[]; events: EventItem[]; memories: Memory[]; sponsors?: Sponsor[]; settings?: Record<string, string> }
 type DisplayEvent = EventItem & { category: EventCategory; kindLabel: string; meta: string; cta: string; mode: 'map' | 'video' | 'users' }
 type Viewer = { title: string; items: MediaItem[]; index: number }
 
@@ -124,6 +125,7 @@ function HomePage() {
   }, [toast])
 
   const members = content.members.length ? content.members : fallbackMembers
+  const sponsors = content.sponsors ?? []
   const events = (content.events.length ? content.events : fallbackEvents).map(toDisplayEvent)
   const visibleEvents = filter === 'all' ? events : events.filter((event) => event.category === filter)
   const activeFilter = filter === 'all' ? null : EVENT_KINDS.find((kind) => kind.value === filter) ?? null
@@ -191,6 +193,8 @@ function HomePage() {
         <section className="reference-team shell section-padding" id="team"><div className="reference-rule" /><div className="reference-section-row"><SectionHeading eyebrow="The people behind techsoc" title="Meet the Core Team" copy="The builders behind techsoc's events, programs, and community initiatives. Dedicated to creating an inclusive, empowering space." /><span className="volunteer-note"><HandHeart size={18} /> {members.length} {members.length === 1 ? 'member' : 'members'} · volunteer organized</span></div><Carousel label="Core team members" perView={teamPerView} className="carousel-team">{members.map((member) => <TeamCard member={member} delay={0} key={member.id} />)}</Carousel></section>
 
         <section className="reference-events band" id="events"><div className="shell"><div className="reference-section-row"><SectionHeading eyebrow="Gatherings & meetups" title="Upcoming Events" copy="Join us in person or tune in online. All sessions are free and open to everyone in the tech community." /><div className="reference-filter" aria-label="Event filters"><button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All events</button>{EVENT_KINDS.map((kind) => <button key={kind.value} className={filter === kind.value ? 'active' : ''} onClick={() => setFilter(kind.value)}>{kind.filter}</button>)}</div></div><Carousel label="Upcoming events" perView={eventPerView} className="carousel-events">{visibleEvents.map((event) => <EventCard event={event} reserved={reserved === event.id} onReserve={reserve} key={event.id} />)}</Carousel>{!visibleEvents.length && <div className="event-empty"><p>No {activeFilter ? activeFilter.filter.toLowerCase() : 'events'} scheduled right now.</p><button onClick={() => setFilter('all')}>Show all events</button></div>}</div></section>
+
+        {sponsors.length > 0 && <section className="reference-sponsors shell section-padding" id="sponsors"><div className="reference-rule" /><SectionHeading eyebrow="Backed by" title="Our Sponsors" copy="The teams whose support keeps meetups free, food warm, and hackathons loud." /><div className="sponsor-grid">{sponsors.map((sponsor) => <a className="sponsor-card" href={sponsor.url || '#sponsors'} key={sponsor.id} target={sponsor.url ? '_blank' : undefined} rel="noreferrer">{sponsor.logo_path ? <img src={sponsor.logo_path} alt={`${sponsor.name} logo`} loading="lazy" /> : <span>{sponsor.name.slice(0, 1)}</span>}<strong>{sponsor.name}</strong><small>{sponsor.tier || 'Community'}</small></a>)}</div></section>}
 
         <section className="reference-archive shell section-padding" id="glimpses">
           <div className="reference-rule" />
