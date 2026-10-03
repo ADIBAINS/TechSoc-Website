@@ -13,6 +13,9 @@
 .admin-inbox{max-width:1320px;margin:20px auto 0;padding:22px;border:1px solid var(--reference-line);background:var(--reference-surface);clip-path:polygon(0 0,calc(100% - 13px) 0,100% 13px,100% 100%,0 100%)}.admin-count{display:inline-grid;min-width:22px;height:22px;place-items:center;margin-left:8px;border:1px solid var(--reference-cyan);color:var(--reference-cyan);font:10px Inter,sans-serif;letter-spacing:0}.inbox-message{display:grid;grid-template-columns:190px 180px minmax(0,1fr);gap:20px;padding:15px 0;border-top:1px solid #1c2a2e}.inbox-message>div{display:flex;flex-direction:column;gap:4px}.inbox-message strong{color:var(--reference-silver);font-size:13px}.inbox-message a,.inbox-message small,.inbox-message>span{color:var(--reference-muted);font-size:10px}.inbox-message>span{align-self:start;padding:5px 8px;border:1px solid rgba(0,200,245,.25);color:var(--reference-cyan)}.inbox-message p{margin:0;color:var(--reference-muted);font-size:12px;line-height:1.6}@media(max-width:800px){.inbox-message{grid-template-columns:1fr;gap:8px}.inbox-message>span{justify-self:start}}
 .hero-photo-card video{display:block;width:100%;height:100%;object-fit:cover;filter:saturate(.65) contrast(1.16) brightness(.82)}
 .hero-photo-card model-viewer{display:block;width:100%;height:100%;--poster-color:transparent;background:radial-gradient(circle,#10262c,#07090a 68%)}
+/* Interactive 3D hero: overlays must not swallow orbit drags (caption has no links). */
+.hero-photo-card.is-model .photo-shade{pointer-events:none;background:linear-gradient(to top,rgba(7,9,10,.55),transparent 42%)}
+.hero-photo-card.is-model .hero-photo-note{pointer-events:none}
 
 /* Upcoming events — filter overflow and empty state */
 .reference-filter{flex-wrap:wrap;max-width:100%}
