@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs'
+import bcrypt from '../../server/password.server'
 import { createFileRoute } from '@tanstack/react-router'
 import { clearSession, createSession, authenticate, sessionCookie, csrfBlock } from '../../server/auth.server'
 import { dbGet, dbRun, ensureAdmin, logAction } from '../../server/db.server'

@@ -1,4 +1,5 @@
 declare module 'bcryptjs' {
+  export function setRandomFallback(random: (length: number) => number[]): void
   export function genSaltSync(rounds?: number): string
   export function genSalt(rounds?: number, callback?: (error: Error | undefined, salt: string) => void): Promise<string> | void
   export function hashSync(data: string, saltOrRounds: string | number): string
@@ -7,6 +8,7 @@ declare module 'bcryptjs' {
   export function compare(data: string, encrypted: string, callback?: (error: Error | undefined, same: boolean) => void): Promise<boolean> | void
 
   const bcrypt: {
+    setRandomFallback: typeof setRandomFallback
     genSaltSync: typeof genSaltSync
     genSalt: typeof genSalt
     hashSync: typeof hashSync

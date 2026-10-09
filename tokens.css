@@ -1,0 +1,10 @@
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 */
+:root {
+  --font-admin-body: Inter, system-ui, sans-serif;
+  --font-admin-display: 'Plus Jakarta Sans', sans-serif;
+  --color-admin-error: #ff9da9;
+  --color-admin-field: #090e10;
+  --color-admin-accent-ink: #031014;
+  --color-admin-tint: rgba(0, 200, 245, .08);
+  --color-admin-clear: transparent;
+}

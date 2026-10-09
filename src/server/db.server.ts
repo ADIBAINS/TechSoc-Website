@@ -3,7 +3,7 @@
 // - Prod (Vercel): set DATABASE_URL (Neon) + BLOB_READ_WRITE_TOKEN (Vercel Blob).
 //   Uploads go to Blob; /tmp fallback only when Blob token is missing.
 import { DatabaseSync } from 'node:sqlite'
-import bcrypt from 'bcryptjs'
+import bcrypt from './password.server'
 import path from 'node:path'
 import fs from 'node:fs'
 

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { ChevronDown, ChevronUp, ImagePlus, LogOut, Pencil, Plus, Save, Star, Trash2, Upload, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, EyeOff, KeyRound, Search, ShieldCheck, Users, CalendarDays, Images, Handshake, Home, Inbox as InboxIcon, ImagePlus, LogOut, Pencil, Plus, Save, Star, Trash2, Upload, X } from 'lucide-react'
 import { EVENT_KINDS } from '../lib/eventKinds'
 
 export const Route = createFileRoute('/admin')({ component: Admin })
@@ -18,7 +18,8 @@ const SINGULAR: Record<ContentTab, string> = { members: 'member', events: 'event
 const singular = (tab: ContentTab) => SINGULAR[tab]
 const jsonHeaders = { 'content-type': 'application/json' }
 
-type AdminSession = { email: string; role: string }
+type AdminSession = { id: number; email: string; role: string }
+const tabInfo = { members: { label: 'Members', detail: 'Manage the people behind TechSoc.', icon: Users }, events: { label: 'Events', detail: 'Plan and publish your next gathering.', icon: CalendarDays }, memories: { label: 'Memories', detail: 'Keep the best moments together.', icon: Images }, sponsors: { label: 'Sponsors', detail: 'Showcase the partners supporting the club.', icon: Handshake }, hero: { label: 'Homepage', detail: 'Update the hero asset and announcement.', icon: Home }, admins: { label: 'Team access', detail: 'Manage accounts and securely reset passwords.', icon: ShieldCheck }, inbox: { label: 'Inbox', detail: 'Read messages from your community.', icon: InboxIcon } }
 
 function Admin() {
   const [admin, setAdmin] = useState<AdminSession | null>(null)
@@ -33,8 +34,17 @@ function Login({ onLogin }: { onLogin: (admin: AdminSession) => void }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const submit = async (event: FormEvent) => { event.preventDefault(); setBusy(true); setError(''); const response = await fetch('/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password }) }); const data = await response.json(); setBusy(false); if (!response.ok) { setError(data.error || 'Unable to sign in'); return } onLogin(data.admin) }
-  return <main className="admin-page admin-login"><div className="admin-login-mark">ts</div><span className="admin-kicker">techsoc / control room</span><h1>Private admin.</h1><p className="admin-muted">Sign in to manage members, events, memories, and the homepage assets.</p><form className="admin-form" onSubmit={submit}><label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required autoComplete="email" placeholder="you@example.com" /></label><label>Password<input value={password} onChange={(event) => setPassword(event.target.value)} type="password" required autoComplete="current-password" /></label>{error && <p className="admin-error">{error}</p>}<button className="admin-primary" disabled={busy}>{busy ? 'Signing in…' : 'Enter control room'}</button></form><a className="admin-back" href="/">← Back to public site</a></main>
+  const submit = async (event: FormEvent) => {
+    event.preventDefault(); setBusy(true); setError('')
+    try {
+      const response = await fetch('/api/auth', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ email, password }) })
+      const data = await response.json()
+      if (!response.ok) { setError(data.error || 'Unable to sign in'); return }
+      onLogin(data.admin)
+    } catch { setError('Could not connect. Please try again.') }
+    finally { setBusy(false) }
+  }
+  return <main className="admin-page admin-login"><div className="admin-login-mark">ts</div><span className="admin-kicker">techsoc / control room</span><h1>Welcome back.</h1><p className="admin-muted">Your workspace for the people, events, and stories that make TechSoc.</p><form className="admin-form" onSubmit={submit} aria-busy={busy}><label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required autoComplete="username" placeholder="you@techsoc.in" /></label><PasswordField label="Password" value={password} onChange={setPassword} autoComplete="current-password" />{error && <p className="admin-error" role="alert">{error}</p>}<button className="admin-primary" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button><p className="admin-muted admin-help">Forgot your password? Ask another admin to reset it from Team access.</p></form><a className="admin-back" href="/">← Back to public site</a></main>
 }
 
 function Dashboard({ admin, onLogout }: { admin: AdminSession; onLogout: () => void }) {
@@ -48,7 +58,17 @@ function Dashboard({ admin, onLogout }: { admin: AdminSession; onLogout: () => v
   const [heroAsset, setHeroAsset] = useState('')
   const [announcement, setAnnouncement] = useState({ enabled: false, text: '', link: '' })
   const [messages, setMessages] = useState<AdminRecord[]>([])
-  const refresh = () => fetch('/api/admin-content').then((response) => response.json()).then(setData)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const refresh = async () => {
+    setLoadError(''); setLoading(true)
+    try {
+      const response = await fetch('/api/admin-content')
+      if (!response.ok) throw new Error('Unable to load content. Please try again.')
+      setData(await response.json())
+    } catch (error) { setLoadError(error instanceof Error ? error.message : 'Could not connect.') }
+    finally { setLoading(false) }
+  }
   const refreshMessages = () => fetch('/api/contact').then((response) => response.ok ? response.json() : []).then(setMessages).catch(() => {})
   useEffect(() => {
     refresh(); refreshMessages()
@@ -75,14 +95,30 @@ function Dashboard({ admin, onLogout }: { admin: AdminSession; onLogout: () => v
     }).catch(() => {})
   }, [tab])
   const logout = async () => { await fetch('/api/auth', { method: 'DELETE' }); onLogout() }
-  const remove = async (type: ContentTab, id: number) => { if (!window.confirm('Delete this item?')) return; await fetch('/api/admin-content', { method: 'DELETE', headers: jsonHeaders, body: JSON.stringify({ type, id }) }); setNotice('Deleted.'); refresh() }
+  const remove = async (type: ContentTab, id: number) => {
+    if (!window.confirm('Delete this item?')) return
+    try {
+      const response = await fetch('/api/admin-content', { method: 'DELETE', headers: jsonHeaders, body: JSON.stringify({ type, id }) })
+      if (!response.ok) { const result = await response.json(); setNotice(result.error || 'Could not delete item.'); return }
+      setNotice('Item deleted.'); refresh()
+    } catch { setNotice('Could not connect. Please try again.') }
+  }
   const saveHero = async () => {
     if (!heroAsset && !announcement.text) return
-    await fetch('/api/settings', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ hero_asset: heroAsset, announcement }) })
-    setNotice('Homepage hero asset saved.')
+    try {
+      const response = await fetch('/api/settings', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ hero_asset: heroAsset, announcement }) })
+      if (!response.ok) { const result = await response.json(); setNotice(result.error || 'Could not save homepage.'); return }
+      setNotice('Homepage changes saved.')
+    } catch { setNotice('Could not connect. Please try again.') }
   }
   const switchTab = (next: Tab) => { setTab(next); setEditing(null) }
-  return <main className="admin-page admin-dashboard"><header className="admin-topbar"><div><span className="admin-kicker">techsoc / control room</span><h1>Content desk.</h1></div><div className="admin-account"><span>{admin.email} · {admin.role}</span><button onClick={logout}><LogOut size={15} /> Sign out</button></div></header><div className="admin-tabs">{visibleTabs.map((item) => <button className={tab === item ? 'active' : ''} key={item} onClick={() => switchTab(item)}>{item === 'hero' ? 'hero asset' : item === 'admins' ? 'team access' : item}{item === 'inbox' ? <b>{messages.length}</b> : isContentTab(item) ? <b>{data[item].length}</b> : null}</button>)}<a href="/">View public site ↗</a></div>{notice && <div className="admin-notice">{notice}<button onClick={() => setNotice('')}><X size={14} /></button></div>}{tab === 'hero' ? <HeroAsset value={heroAsset} onChange={setHeroAsset} onSave={saveHero} announcement={announcement} onAnnouncement={setAnnouncement} /> : tab === 'inbox' ? <Inbox messages={messages} onRefresh={refreshMessages} /> : tab === 'admins' ? <TeamAccess /> : <ContentPanel tab={tab} data={data} editing={editing} setEditing={setEditing} onDelete={remove} onSaved={() => { setEditing(null); setNotice('Saved.'); refresh() }} onRefresh={refresh} />}<PasswordChange notify={setNotice} /></main>
+  return <main className="admin-page admin-dashboard">
+    <aside className="admin-sidebar"><a className="admin-brand" href="/">ts<span>TechSoc<small>Control room</small></span></a><nav className="admin-tabs" aria-label="Admin sections">{visibleTabs.map((item) => { const Icon = tabInfo[item].icon; return <button type="button" aria-current={tab === item ? 'page' : undefined} className={tab === item ? 'active' : ''} key={item} onClick={() => switchTab(item)}><Icon size={18} /><span>{tabInfo[item].label}</span>{item === 'inbox' ? <b>{messages.length}</b> : isContentTab(item) ? <b>{data[item].length}</b> : null}</button> })}</nav><a className="admin-public-link" href="/">View public site ↗</a><div className="admin-account"><span>{admin.email}<small>{isAdmin ? 'Administrator' : 'Content editor'}</small></span><button onClick={logout}><LogOut size={15} /> Sign out</button></div></aside>
+    <div className="admin-workspace"><header className="admin-topbar"><div><span className="admin-kicker">Workspace / {tabInfo[tab].label}</span><h1>{tabInfo[tab].label}</h1><p className="admin-muted">{tabInfo[tab].detail}</p></div></header>
+    {notice && <div className="admin-notice" role="status">{notice}<button aria-label="Dismiss notification" onClick={() => setNotice('')}><X size={16} /></button></div>}
+    {tab === 'hero' ? <HeroAsset value={heroAsset} onChange={setHeroAsset} onSave={saveHero} announcement={announcement} onAnnouncement={setAnnouncement} /> : tab === 'inbox' ? <Inbox messages={messages} onRefresh={refreshMessages} /> : tab === 'admins' ? <TeamAccess admin={admin} /> : loading ? <div className="admin-list admin-loading" role="status">Loading {tabInfo[tab].label.toLowerCase()}…</div> : loadError ? <div className="admin-list"><p className="admin-error" role="alert">{loadError}</p><button className="admin-secondary" onClick={refresh}>Try again</button></div> : <ContentPanel key={tab} tab={tab} data={data} editing={editing} setEditing={setEditing} onDelete={remove} onSaved={() => { setEditing(null); setNotice('Changes saved.'); refresh() }} onRefresh={refresh} />}
+    <PasswordChange notify={setNotice} /></div>
+  </main>
 }
 
 function PasswordChange({ notify }: { notify: (message: string) => void }) {
@@ -93,17 +129,21 @@ function PasswordChange({ notify }: { notify: (message: string) => void }) {
   const [busy, setBusy] = useState(false)
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError('')
-    const response = await fetch('/api/auth', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ currentPassword, newPassword }) })
-    const result = await response.json().catch(() => ({})) as { error?: string }
-    setBusy(false)
-    if (!response.ok) { setError(result.error ?? 'Could not change password'); return }
-    setCurrentPassword(''); setNewPassword(''); setOpen(false); notify('Password changed.')
+    try {
+      const response = await fetch('/api/auth', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ currentPassword, newPassword }) })
+      const result = await response.json().catch(() => ({})) as { error?: string }
+      if (!response.ok) { setError(result.error ?? 'Could not change password'); return }
+      setCurrentPassword(''); setNewPassword(''); setOpen(false); notify('Password changed.')
+    } catch { setError('Could not connect. Please try again.') }
+    finally { setBusy(false) }
   }
-  return <section className="admin-inbox admin-panel"><div className="admin-list-head"><div><span className="admin-kicker">Security</span><h2>Password</h2></div><button className="admin-secondary" onClick={() => setOpen(!open)}>{open ? 'Cancel' : 'Change password'}</button></div>{open && <form className="admin-form" onSubmit={submit}><label>Current password<input value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} type="password" required autoComplete="current-password" /></label><label>New password (8+ characters)<input value={newPassword} onChange={(event) => setNewPassword(event.target.value)} type="password" required minLength={8} autoComplete="new-password" /></label>{error && <p className="admin-error">{error}</p>}<button className="admin-primary" disabled={busy}>{busy ? 'Saving…' : 'Save new password'}</button></form>}</section>
+  return <section className="admin-inbox admin-panel admin-security"><div className="admin-list-head"><div><span className="admin-kicker">Your account</span><h2>Password & security</h2></div><button className="admin-secondary" disabled={busy} onClick={() => { setOpen(!open); setCurrentPassword(''); setNewPassword(''); setError('') }}>{open ? 'Cancel' : 'Change password'}</button></div>{open && <form className="admin-form" onSubmit={submit} aria-busy={busy}><PasswordField label="Current password" value={currentPassword} onChange={setCurrentPassword} autoComplete="current-password" /><PasswordField label="New password (8+ characters)" value={newPassword} onChange={setNewPassword} minLength={8} />{error && <p className="admin-error" role="alert">{error}</p>}<button className="admin-primary" disabled={busy}>{busy ? 'Saving…' : 'Save new password'}</button></form>}</section>
 }
 
 function ContentPanel({ tab, data, editing, setEditing, onDelete, onSaved, onRefresh }: { tab: ContentTab; data: AdminData; editing: AdminRecord | null; setEditing: (record: AdminRecord | null) => void; onDelete: (type: ContentTab, id: number) => void; onSaved: () => void; onRefresh: () => void }) {
-  return <section className="admin-layout"><div className="admin-list"><div className="admin-list-head"><div><span className="admin-kicker">Published content</span><h2>{tab}</h2></div><button className="admin-secondary" onClick={() => setEditing({ id: 0 })}><Plus size={16} /> Add {singular(tab)}</button></div>{data[tab].map((record) => <AdminRow key={record.id} record={record} onEdit={() => setEditing(record)} onDelete={() => onDelete(tab, record.id)} />)}{!data[tab].length && <div className="admin-empty">Nothing here yet. Add your first {singular(tab)}.</div>}</div>{editing && <Editor type={tab} initial={editing} onClose={() => setEditing(null)} onSaved={onSaved} onRefresh={onRefresh} />}</section>
+  const [query, setQuery] = useState('')
+  const records = data[tab].filter((record) => [record.name, record.title, record.role, record.kind, record.tier, record.caption].some((value) => String(value || '').toLowerCase().includes(query.trim().toLowerCase())))
+  return <section className={`admin-layout ${editing ? 'admin-layout-editing' : ''}`}><div className="admin-list"><div className="admin-list-head"><div><span className="admin-kicker">Content library</span><h2>{data[tab].length} {tab}</h2></div><button className="admin-primary" onClick={() => setEditing({ id: 0 })}><Plus size={16} /> Add {singular(tab)}</button></div><label className="admin-search"><Search size={18} /><input aria-label={`Search ${tab}`} type="search" placeholder={`Search ${tab}…`} value={query} onChange={(event) => setQuery(event.target.value)} /></label>{records.map((record) => <AdminRow key={record.id} record={record} onEdit={() => setEditing(record)} onDelete={() => onDelete(tab, record.id)} />)}{!records.length && <div className="admin-empty">{query ? 'No matches. Try another search.' : `No ${tab} yet. Add your first ${singular(tab)} to get started.`}</div>}</div>{editing && <Editor key={`${tab}-${editing.id}`} type={tab} initial={editing} onClose={() => setEditing(null)} onSaved={onSaved} onRefresh={onRefresh} />}</section>
 }
 
 function HeroAsset({ value, onChange, onSave, announcement, onAnnouncement }: {
@@ -316,31 +356,91 @@ function renderField(key: string, value: string, set: (key: string, value: strin
 
 function AssetUploader({ onUploaded }: { onUploaded: (path: string) => void }) { const upload = async (file: File) => { const data = new FormData(); data.set('file', file); const response = await fetch('/api/upload', { method: 'POST', body: data }); const result = await response.json(); if (response.ok) onUploaded(result.path) }; return <label className="asset-drop"><ImagePlus size={22} /><span><strong>Choose an asset</strong><small>Images, MP4, GLB, or GLTF · max 25MB</small></span><Upload size={17} /><input type="file" accept="image/*,video/mp4,.glb,.gltf" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file) }} /></label> }
 
-function TeamAccess() {
-  const [accounts, setAccounts] = useState<{ id: number; email: string; role: string }[]>([])
+function PasswordField({ label, value, onChange, autoComplete = 'new-password', minLength }: { label: string; value: string; onChange: (value: string) => void; autoComplete?: string; minLength?: number }) {
+  const [visible, setVisible] = useState(false)
+  return <label>{label}<span className="admin-password-field"><input type={visible ? 'text' : 'password'} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} required minLength={minLength} maxLength={256} /><button type="button" aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`} aria-pressed={visible} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></span></label>
+}
+
+type TeamAccount = { id: number; email: string; role: string }
+function TeamAccess({ admin }: { admin: AdminSession }) {
+  const [accounts, setAccounts] = useState<TeamAccount[]>([])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('editor')
   const [error, setError] = useState('')
-  const load = useCallback(() => {
-    fetch('/api/admins').then((response) => (response.ok ? response.json() : [])).then(setAccounts).catch(() => {})
+  const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [target, setTarget] = useState<TeamAccount | null>(null)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const editorRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!target) return
+    if (window.matchMedia('(max-width: 1150px)').matches) {
+      editorRef.current?.scrollIntoView({ block: 'start' })
+    }
+    editorRef.current?.querySelector('input')?.focus({ preventScroll: true })
+  }, [target])
+  const load = useCallback(async () => {
+    setLoading(true); setLoadError('')
+    try {
+      const response = await fetch('/api/admins')
+      if (!response.ok) throw new Error('Could not load team accounts.')
+      setAccounts(await response.json())
+    } catch { setLoadError('Could not load team accounts. Please try again.') }
+    finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
+  const mutate = async (method: string, body: unknown) => {
+    const response = await fetch('/api/admins', { method, headers: jsonHeaders, body: JSON.stringify(body) })
+    const result = await response.json().catch(() => ({})) as { error?: string }
+    if (!response.ok) throw new Error(result.error || 'Unable to save changes.')
+  }
   const invite = async (event: FormEvent) => {
-    event.preventDefault(); setError('')
-    const response = await fetch('/api/admins', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ email, password, role }) })
-    const result = await response.json().catch(() => ({})) as { error?: string }
-    if (!response.ok) { setError(result.error ?? 'Could not invite'); return }
-    setEmail(''); setPassword(''); load()
+    event.preventDefault(); setBusy(true); setError(''); setNotice('')
+    try {
+      await mutate('POST', { email, password, role })
+      setNotice(`Account created for ${email}. Share their credentials privately.`)
+      setEmail(''); setPassword(''); await load()
+    } catch (error) { setError(error instanceof Error ? error.message : 'Could not connect.') }
+    finally { setBusy(false) }
   }
-  const remove = async (id: number) => {
-    if (!window.confirm('Remove this account?')) return
-    const response = await fetch('/api/admins', { method: 'DELETE', headers: jsonHeaders, body: JSON.stringify({ id }) })
-    const result = await response.json().catch(() => ({})) as { error?: string }
-    if (!response.ok) { setError(result.error ?? 'Could not remove'); return }
-    load()
+  const reset = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!target) return
+    setError(''); setNotice('')
+    if (newPassword !== confirmation) { setError('The new passwords do not match.'); return }
+    setBusy(true)
+    try {
+      await mutate('PUT', { id: target.id, currentPassword, newPassword })
+      setNotice(`Password reset for ${target.email}. Existing sessions have been signed out. Share the new password privately.`)
+      setTarget(null); setCurrentPassword(''); setNewPassword(''); setConfirmation('')
+    } catch (error) { setError(error instanceof Error ? error.message : 'Could not connect.') }
+    finally { setBusy(false) }
   }
-  return <section className="admin-inbox admin-panel"><div className="admin-list-head"><div><span className="admin-kicker">Accounts</span><h2>Team access</h2></div></div>{accounts.map((a) => <div className="admin-row" key={a.id}><div><span className="admin-row-mark">✳</span><div><strong>{a.email}</strong><small>{a.role}</small></div></div><span className="admin-row-date" /><div className="admin-row-actions"><button onClick={() => remove(a.id)} aria-label={`Remove ${a.email}`}><Trash2 size={15} /></button></div></div>)}{!accounts.length && <div className="admin-empty">No accounts yet.</div>}<form className="admin-form" onSubmit={invite}><label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required /></label><label>Password (8+ characters)<input value={password} onChange={(event) => setPassword(event.target.value)} type="password" required minLength={8} autoComplete="new-password" /></label><label>Role<select value={role} onChange={(event) => setRole(event.target.value)}><option value="editor">editor — content only</option><option value="admin">admin — full access</option></select></label>{error && <p className="admin-error">{error}</p>}<button className="admin-primary">Invite</button></form></section>
+  const remove = async (account: TeamAccount) => {
+    if (!window.confirm(`Remove ${account.email}? They will lose access to the control room.`)) return
+    setBusy(true); setError(''); setNotice('')
+    try {
+      await mutate('DELETE', { id: account.id })
+      if (target?.id === account.id) { setTarget(null); setCurrentPassword(''); setNewPassword(''); setConfirmation('') }
+      setNotice(`Access removed for ${account.email}.`); await load()
+    } catch (error) { setError(error instanceof Error ? error.message : 'Could not connect.') }
+    finally { setBusy(false) }
+  }
+  const chooseTarget = (account: TeamAccount | null) => {
+    setTarget(account); setError(''); setCurrentPassword(''); setNewPassword(''); setConfirmation('')
+  }
+  return <section className="admin-team">
+    <div className="admin-list"><div className="admin-list-head"><div><span className="admin-kicker">Access directory</span><h2>Team accounts</h2></div><span className="admin-role">{accounts.length} accounts</span></div>
+      {notice && <p className="admin-notice" role="status">{notice}</p>}
+      {loading ? <p className="admin-muted" role="status">Loading accounts…</p> : loadError ? <div><p className="admin-error" role="alert">{loadError}</p><button className="admin-secondary" onClick={load}>Try again</button></div> : accounts.map((account) => <div className="admin-team-row" key={account.id}><div className="admin-team-identity"><span className="admin-row-mark"><Users size={18} /></span><div><strong>{account.email}</strong><small>{account.id === admin.id ? 'Your account' : account.role === 'admin' ? 'Full control room access' : 'Content and inbox access'}</small></div></div><span className="admin-role">{account.role || 'admin'}</span><div className="admin-team-actions">{account.id !== admin.id && <><button className="admin-secondary" disabled={busy} onClick={() => chooseTarget(account)}><KeyRound size={15} /> Reset password</button><button className="admin-remove" disabled={busy} aria-label={`Remove ${account.email}`} onClick={() => remove(account)}><Trash2 size={16} /></button></>}</div></div>)}
+    </div>
+    <aside className="admin-editor" ref={editorRef}>{error && <p className="admin-error" role="alert">{error}</p>}{target ? <><div className="admin-editor-head"><div><span className="admin-kicker">Account recovery</span><h2>Reset password</h2></div><button disabled={busy} aria-label="Cancel password reset" onClick={() => chooseTarget(null)}><X size={18} /></button></div><p className="admin-muted">Set a new password for <strong>{target.email}</strong>. This signs them out on every device.</p><form className="admin-form" onSubmit={reset} aria-busy={busy}><PasswordField label="Your current password" value={currentPassword} onChange={setCurrentPassword} autoComplete="current-password" /><PasswordField label="New password (8+ characters)" value={newPassword} onChange={setNewPassword} minLength={8} /><PasswordField label="Confirm new password" value={confirmation} onChange={setConfirmation} minLength={8} /><p className="admin-muted admin-help">Share the new password with the account owner privately.</p><button className="admin-primary" disabled={busy}>{busy ? 'Resetting…' : 'Reset password'}</button><button type="button" className="admin-secondary" disabled={busy} onClick={() => chooseTarget(null)}>Cancel</button></form></> : <><div className="admin-editor-head"><div><span className="admin-kicker">Grow the team</span><h2>Add an account</h2></div><Plus size={20} /></div><p className="admin-muted">Create access for a club member. Editors manage content; admins also manage the homepage and team.</p><form className="admin-form" onSubmit={invite} aria-busy={busy}><label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="off" required maxLength={254} placeholder="member@techsoc.in" /></label><PasswordField label="Initial password (8+ characters)" value={password} onChange={setPassword} minLength={8} /><label>Access level<select value={role} onChange={(event) => setRole(event.target.value)}><option value="editor">Editor — content & inbox</option><option value="admin">Admin — full access</option></select></label><button className="admin-primary" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button></form></>}</aside>
+  </section>
 }
 
 function Inbox({ messages, onRefresh }: { messages: AdminRecord[]; onRefresh: () => void }) {  return <section className="admin-inbox admin-panel"><div className="admin-list-head"><div><span className="admin-kicker">Contact form</span><h2>Inbox <b className="admin-count">{messages.length}</b></h2></div><button className="admin-secondary" onClick={onRefresh}>Refresh</button></div>{messages.length ? messages.map((message) => <article className="inbox-message" key={message.id}><div><strong>{String(message.name)}</strong><a href={`mailto:${String(message.email)}`}>{String(message.email)}</a><small>{String(message.created_at || '')}</small></div><span>{String(message.involvement || 'General inquiry')}</span><p>{String(message.message)}</p></article>) : <div className="admin-empty">No messages yet.</div>}</section>

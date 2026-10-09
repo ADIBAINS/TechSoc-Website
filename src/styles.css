@@ -1,3 +1,6 @@
+/* Hallmark · macrostructure: Workbench · tone: utilitarian · anchor hue: cyan */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 */
+@import '../tokens.css';
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root{--reference-ink:#edf7f8;--reference-muted:#9aa9af;--reference-paper:#07090a;--reference-surface:#0d1214;--reference-panel:#11191c;--reference-line:#26383d;--reference-cyan:#00c8f5;--reference-cyan-bright:#21e3ff;--reference-cyan-deep:#007d9f;--reference-silver:#dce8ea;--reference-focus:#f3c75f;color:var(--reference-ink);background:var(--reference-paper);font-family:Inter,system-ui,sans-serif;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;scroll-behavior:smooth;scroll-padding-top:92px}
@@ -189,3 +192,92 @@
 .sponsor-card small{color:var(--reference-cyan);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
 @media(max-width:960px){.sponsor-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.reference-sponsors{padding-block:78px}.sponsor-grid{gap:16px;margin-top:32px}}
+
+/* Hallmark · macrostructure: Workbench · tone: utilitarian · anchor hue: cyan */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 */
+.admin-page{font-family:var(--font-admin-body)}
+.admin-page h1,.admin-page h2{font-family:var(--font-admin-display);font-style:normal;overflow-wrap:anywhere;min-width:0;letter-spacing:-.045em}
+.admin-dashboard{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:none;padding:0;min-height:100vh}
+.admin-sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:28px 18px;border-right:1px solid var(--reference-line);background:var(--reference-surface);color:var(--reference-ink)}
+.admin-brand{display:flex;align-items:center;gap:14px;margin:0 12px 40px;color:var(--reference-cyan);font:800 28px var(--font-admin-display)}
+.admin-brand span{color:var(--reference-ink);font-size:16px;letter-spacing:-.03em}
+.admin-brand small{display:block;margin-top:4px;color:var(--reference-muted);font:12px var(--font-admin-body);letter-spacing:0}
+.admin-dashboard .admin-tabs{display:flex;flex-direction:column;align-items:stretch;gap:6px;border:0;margin:0;padding:0;width:100%;overflow:visible}
+.admin-dashboard .admin-tabs button{min-height:46px;gap:12px;padding:10px 12px;white-space:nowrap;border-radius:6px;text-align:left;font-weight:500}
+.admin-tabs button b{margin-left:auto;border:0;background:var(--reference-panel);color:var(--reference-muted);border-radius:4px;min-width:24px;text-align:center}
+.admin-dashboard .admin-tabs button.active{border-color:var(--reference-line);background:var(--color-admin-tint);color:var(--reference-cyan)}
+.admin-public-link{margin:24px 12px;color:var(--reference-muted);font-size:12px;padding-block:12px;white-space:nowrap}
+.admin-sidebar .admin-account{margin-top:auto;display:flex;flex-direction:column;align-items:stretch;gap:16px;border-top:1px solid var(--reference-line);padding:20px 10px 0;min-width:0}
+.admin-account span{overflow-wrap:anywhere;line-height:1.6;color:var(--reference-silver)}
+.admin-account small{display:block;color:var(--reference-muted);font-size:11px}
+.admin-account button{justify-content:center;min-height:44px;border-radius:6px}
+.admin-workspace{width:100%;max-width:1480px;margin-inline:auto;min-width:0;padding:40px clamp(20px,3.5vw,56px)}
+.admin-workspace .admin-topbar{margin:0 0 28px;max-width:none;padding-bottom:26px;border-bottom:1px solid var(--reference-line)}
+.admin-topbar h1{font-size:clamp(30px,4vw,44px);margin-block:10px}
+.admin-topbar .admin-muted{margin:0;font-size:14px}
+.admin-page h2{font-size:22px;letter-spacing:-.035em}
+.admin-layout{grid-template-columns:minmax(0,1fr);max-width:none;gap:24px;align-items:start}
+.admin-layout-editing{grid-template-columns:minmax(0,1fr) minmax(300px,380px)}
+.admin-list,.admin-editor,.admin-assets,.admin-inbox{padding:24px;clip-path:none;border-radius:8px;min-width:0}
+.admin-editor{position:sticky;top:24px}
+.admin-list-head,.admin-editor-head{align-items:center;margin-bottom:22px}
+.admin-list-head h2,.admin-editor-head h2{margin-bottom:0}
+.admin-primary,.admin-secondary{min-height:44px;border-radius:6px;clip-path:none;white-space:nowrap;font-size:12px;padding:0 14px}
+.admin-primary{color:var(--color-admin-accent-ink)}
+.admin-page button:disabled{cursor:not-allowed;opacity:.55}
+.admin-page button:active:not(:disabled){transform:translateY(1px)}
+.admin-page button:focus-visible,.admin-page a:focus-visible{outline:2px solid var(--reference-focus);outline-offset:3px}
+.admin-form{gap:18px}
+.admin-form label{font-size:12px;text-transform:none;letter-spacing:0;color:var(--reference-silver);font-weight:500;min-width:0}
+.admin-form input,.admin-form textarea,.admin-form select,.asset-save input{border-radius:6px;min-height:44px;background:var(--color-admin-field);color:var(--reference-ink);font-family:var(--font-admin-body);font-size:14px}
+.admin-form input:hover,.admin-form textarea:hover,.admin-form select:hover{background:var(--reference-panel);color:var(--reference-ink)}
+.admin-form input:focus-visible,.admin-form textarea:focus-visible,.admin-form select:focus-visible,.asset-save input:focus-visible{outline:2px solid var(--reference-focus);outline-offset:2px;box-shadow:none}
+.admin-search{display:flex;align-items:center;gap:10px;margin-bottom:18px;min-height:44px;padding:0 12px;border:1px solid var(--reference-line);border-radius:6px;color:var(--reference-muted);background:var(--color-admin-field)}
+.admin-search:focus-within{outline:2px solid var(--reference-focus);outline-offset:2px}
+.admin-search input{width:100%;min-width:0;border:0;background:var(--color-admin-clear);color:var(--reference-ink);font-size:14px;min-height:44px;outline:none}
+.admin-row{padding:18px 0;border-color:var(--reference-line)}
+.admin-row strong{font-size:14px}
+.admin-row small,.admin-row-date{font-size:12px;line-height:1.5}
+.admin-row img,.admin-row-mark{width:44px;height:44px;border-radius:6px}
+.admin-row-actions button{width:44px;height:44px;border-radius:6px}
+.admin-editor-head button,.admin-notice button{min-width:44px;min-height:44px;justify-content:center;flex-shrink:0;border-radius:6px}
+.admin-empty{padding:42px 8px;text-align:center;line-height:1.7;font-size:14px}
+.admin-loading{padding:48px;color:var(--reference-muted)}
+.admin-error{color:var(--color-admin-error);font-size:13px;line-height:1.6;margin-bottom:12px}
+.admin-notice{border-radius:6px;line-height:1.65;font-size:13px;overflow-wrap:anywhere}
+.admin-workspace>.admin-inbox:last-child{margin-top:28px}
+.admin-team{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:24px;align-items:start}
+.admin-team-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:20px 0;border-top:1px solid var(--reference-line);align-items:center}
+.admin-team-identity{display:flex;gap:12px;align-items:center;min-width:0}
+.admin-team-identity>div{min-width:0}
+.admin-team-identity strong{display:block;font-size:13px;line-height:1.5;color:var(--reference-ink);overflow-wrap:anywhere}
+.admin-team-identity small{display:block;font-size:12px;color:var(--reference-muted);margin-top:4px;line-height:1.5}
+.admin-role{font-size:11px;border:1px solid var(--reference-line);border-radius:4px;padding:5px 8px;color:var(--reference-muted);white-space:nowrap}
+.admin-team-actions{display:flex;gap:8px;grid-column:1/-1;padding-left:56px}
+.admin-remove{display:grid;place-items:center;min-width:44px;min-height:44px;border:1px solid var(--reference-line);border-radius:6px;background:var(--color-admin-clear);color:var(--reference-muted)}
+.admin-remove:hover{color:var(--color-admin-error);border-color:var(--color-admin-error)}
+.admin-password-field{display:flex;position:relative;min-width:0}
+.admin-password-field input{padding-right:48px}
+.admin-password-field button{position:absolute;right:1px;top:1px;bottom:1px;display:grid;place-items:center;width:44px;border:0;background:var(--color-admin-clear);color:var(--reference-muted);border-radius:6px}
+.admin-password-field button:hover{color:var(--reference-cyan)}
+.admin-help{margin:0;font-size:12px;line-height:1.6}
+.admin-editor>.admin-muted{margin-top:0;margin-bottom:24px;overflow-wrap:anywhere}
+.admin-login{max-width:520px;padding:32px;min-height:100vh}
+.admin-login h1{font-size:clamp(36px,7vw,56px);margin-block:18px}
+.admin-login .admin-form{max-width:none}
+.admin-login .admin-primary{margin-top:4px}
+.admin-login-mark{border-radius:6px;clip-path:none;color:var(--color-admin-accent-ink);font-family:var(--font-admin-display)}
+@media(max-width:1150px){.admin-team{grid-template-columns:minmax(0,1fr)}.admin-team .admin-editor{position:static}.admin-layout-editing{grid-template-columns:minmax(0,1fr)}.admin-editor{position:static}}
+@media(max-width:768px){
+ .admin-dashboard{display:block}.admin-sidebar{height:auto;position:static;padding:20px 16px;border-right:0;border-bottom:1px solid var(--reference-line)}
+ .admin-brand{margin:0 4px 22px}.admin-dashboard .admin-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .admin-dashboard .admin-tabs button{font-size:12px;padding:10px 8px;gap:8px;min-width:0}.admin-tabs button b{font-size:10px;padding:2px;min-width:20px}
+ .admin-public-link{margin:14px 4px 0;align-self:flex-start}.admin-sidebar .admin-account{flex-direction:row;align-items:center;justify-content:space-between;margin-top:16px;padding:16px 4px 0;gap:10px}.admin-account span{font-size:12px;min-width:0}.admin-account button{white-space:nowrap}
+ .admin-workspace{padding:26px 16px}.admin-workspace .admin-topbar{padding-bottom:20px;margin-bottom:20px}.admin-list,.admin-editor,.admin-assets,.admin-inbox{padding:18px}
+ .admin-list-head{gap:12px;flex-wrap:wrap}.admin-list-head h2{font-size:20px}.admin-team-row{gap:12px}.admin-team-actions{padding-left:0}
+ .admin-row{gap:10px}.admin-row-actions{gap:4px}.admin-row img,.admin-row-mark{width:36px;height:36px}.admin-row>div:first-child{gap:8px}
+ .admin-assets{grid-template-columns:minmax(0,1fr)}.inbox-message{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){.admin-page *{transition:none;scroll-behavior:auto}.admin-page button:active:not(:disabled){transform:none}}
+.admin-security .admin-form{max-width:420px}
+@media(max-width:480px){.admin-team-row{grid-template-columns:minmax(0,1fr)}.admin-team-row>.admin-role{justify-self:start;margin-left:48px}.admin-team-actions{grid-column:1}}

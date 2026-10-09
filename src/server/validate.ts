@@ -93,6 +93,11 @@ export const adminInviteSchema = z.object({
   role: z.enum(['admin', 'editor']).optional().default('editor'),
 })
 export const adminRemoveSchema = z.object({ id })
+export const adminResetPasswordSchema = z.object({
+  id,
+  currentPassword: z.string().min(1).max(256),
+  newPassword: z.string().min(8).max(256),
+})
 
 /** Parse request JSON against a schema. Returns data or a 400 Response. */
 export async function readJson<T extends z.ZodTypeAny>(
