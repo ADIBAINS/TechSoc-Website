@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node --env-file=.env scripts/migrate-sqlite-to-postgres.mjs",
-    "db:migrate-uploads": "node --env-file=.env scripts/migrate-uploads-to-blob.mjs"
+    "db:migrate-uploads": "node --env-file=.env scripts/migrate-uploads-to-blob.mjs",
+    "test:owner": "npm run build && node --test tests/owner-account.test.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

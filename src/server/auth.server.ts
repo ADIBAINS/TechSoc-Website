@@ -1,12 +1,13 @@
 import { randomBytes } from 'node:crypto'
 import { dbGet, dbRun, ensureAdmin, isPostgres } from './db.server'
+import { accountRole, type AccountRole } from './account-policy.server'
 
 const sessionDuration = 1000 * 60 * 60 * 24 * 14
 
 // SQLite uses datetime('now'), Postgres uses NOW().
 const nowExpr = isPostgres ? 'NOW()' : `datetime('now')`
 
-export type Session = { id: number; email: string; role: string }
+export type Session = { id: number; email: string; role: AccountRole }
 
 export async function authenticate(request: Request): Promise<Session | null> {
   await ensureAdmin()
@@ -17,13 +18,13 @@ export async function authenticate(request: Request): Promise<Session | null> {
     [token],
   )
   if (!session) return null
-  return { id: session.id, email: session.email, role: session.role || 'admin' }
+  return { id: session.id, email: session.email, role: accountRole(session) }
 }
 
-/** Session + admin-role check for admin-only routes (settings, admin accounts). */
+/** Session + owner/admin check for privileged routes (settings, admin accounts). */
 export async function requireAdmin(request: Request): Promise<Session | null> {
   const session = await authenticate(request)
-  return session && session.role === 'admin' ? session : null
+  return session && (session.role === 'admin' || session.role === 'owner') ? session : null
 }
 
 export async function createSession(adminId: number) {

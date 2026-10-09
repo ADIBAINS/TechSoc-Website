@@ -4,6 +4,7 @@ import { clearSession, createSession, authenticate, sessionCookie, csrfBlock } f
 import { dbGet, dbRun, ensureAdmin, logAction } from '../../server/db.server'
 import { checkRateLimit, clientIp, rateLimitResponse } from '../../server/ratelimit'
 import { loginSchema, passwordChangeSchema, readJson } from '../../server/validate'
+import { accountRole } from '../../server/account-policy.server'
 
 export const Route = createFileRoute('/api/auth')({
   server: {
@@ -27,7 +28,7 @@ export const Route = createFileRoute('/api/auth')({
         if (!admin || !bcrypt.compareSync(password, admin.password_hash)) return Response.json({ error: 'Invalid email or password' }, { status: 401 })
         const session = await createSession(admin.id)
         logAction(admin.id, 'login')
-        return new Response(JSON.stringify({ admin: { id: admin.id, email: admin.email, role: admin.role || 'admin' } }), { headers: { 'content-type': 'application/json', 'set-cookie': sessionCookie(session.token, session.expires) } })
+        return new Response(JSON.stringify({ admin: { id: admin.id, email: admin.email, role: accountRole(admin) } }), { headers: { 'content-type': 'application/json', 'set-cookie': sessionCookie(session.token, session.expires) } })
       },
       DELETE: async ({ request }) => {
         const blocked = csrfBlock(request)

@@ -81,9 +81,15 @@ Admins see tabs **members | events | memories | sponsors | hero | team access
 Editors: generic field form + single cover/logo upload (members/events/sponsors)
 or full media manager (memories); event editors show the RSVP attendee list.
 Hero tab edits `hero_asset` + `announcement` setting. Team-access tab invites
-(`editor` default) and removes accounts (never self). Password change lives at
-the bottom for every role.
-the bottom for every role.
+(`editor` default), resets passwords, and removes accounts (never self).
+`adibains06@gmail.com` is the sole owner: this identity is reserved in
+`account-policy.server.ts`, and owner status is derived rather than assignable.
+Only the owner can create/manage admins; admins can create/manage editors.
+Nobody can reset or delete the owner through account management. The owner
+changes their own password with current-password verification, in their account
+row. Editors use the dedicated Your account tab. These rules use the existing
+email/role fields in both SQLite and Postgres, with no schema migration.
+Run `npm run test:owner` for the built-app authorization regression checks.
 
 ## API contract
 
