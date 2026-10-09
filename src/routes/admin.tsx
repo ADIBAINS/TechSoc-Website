@@ -9,7 +9,7 @@ type AdminRecord = Record<string, unknown> & { id: number }
 type AdminData = { members: AdminRecord[]; events: AdminRecord[]; memories: AdminRecord[]; sponsors: AdminRecord[] }
 type MediaRow = { id: number; path: string; kind: string; caption: string; sort_order: number }
 type ContentTab = keyof AdminData
-type Tab = ContentTab | 'hero' | 'inbox' | 'admins'
+type Tab = ContentTab | 'hero' | 'inbox' | 'admins' | 'account'
 const contentTabs: ContentTab[] = ['members', 'events', 'memories', 'sponsors']
 const emptyData: AdminData = { members: [], events: [], memories: [], sponsors: [] }
 const isContentTab = (tab: Tab): tab is ContentTab => (contentTabs as string[]).includes(tab)
@@ -19,7 +19,7 @@ const singular = (tab: ContentTab) => SINGULAR[tab]
 const jsonHeaders = { 'content-type': 'application/json' }
 
 type AdminSession = { id: number; email: string; role: string }
-const tabInfo = { members: { label: 'Members', detail: 'Manage the people behind TechSoc.', icon: Users }, events: { label: 'Events', detail: 'Plan and publish your next gathering.', icon: CalendarDays }, memories: { label: 'Memories', detail: 'Keep the best moments together.', icon: Images }, sponsors: { label: 'Sponsors', detail: 'Showcase the partners supporting the club.', icon: Handshake }, hero: { label: 'Homepage', detail: 'Update the hero asset and announcement.', icon: Home }, admins: { label: 'Team access', detail: 'Manage accounts and securely reset passwords.', icon: ShieldCheck }, inbox: { label: 'Inbox', detail: 'Read messages from your community.', icon: InboxIcon } }
+const tabInfo = { members: { label: 'Members', detail: 'Manage the people behind TechSoc.', icon: Users }, events: { label: 'Events', detail: 'Plan and publish your next gathering.', icon: CalendarDays }, memories: { label: 'Memories', detail: 'Keep the best moments together.', icon: Images }, sponsors: { label: 'Sponsors', detail: 'Showcase the partners supporting the club.', icon: Handshake }, hero: { label: 'Homepage', detail: 'Update the hero asset and announcement.', icon: Home }, admins: { label: 'Team access', detail: 'Manage accounts and securely reset passwords.', icon: ShieldCheck }, inbox: { label: 'Inbox', detail: 'Read messages from your community.', icon: InboxIcon }, account: { label: 'Your account', detail: 'Manage your own sign-in password.', icon: KeyRound } }
 
 function Admin() {
   const [admin, setAdmin] = useState<AdminSession | null>(null)
@@ -49,8 +49,8 @@ function Login({ onLogin }: { onLogin: (admin: AdminSession) => void }) {
 
 function Dashboard({ admin, onLogout }: { admin: AdminSession; onLogout: () => void }) {
   const isAdmin = admin.role === 'admin'
-  // Editors keep content + inbox; hero asset and account management are admin-only.
-  const visibleTabs: Tab[] = [...contentTabs, ...(isAdmin ? (['hero', 'admins'] as Tab[]) : []), 'inbox']
+  // Editors keep content, inbox, and their own account; team management is admin-only.
+  const visibleTabs: Tab[] = [...contentTabs, ...(isAdmin ? (['hero', 'admins'] as Tab[]) : (['account'] as Tab[])), 'inbox']
   const [tab, setTab] = useState<Tab>('members')
   const [data, setData] = useState<AdminData>(emptyData)
   const [editing, setEditing] = useState<AdminRecord | null>(null)
@@ -116,8 +116,8 @@ function Dashboard({ admin, onLogout }: { admin: AdminSession; onLogout: () => v
     <aside className="admin-sidebar"><a className="admin-brand" href="/">ts<span>TechSoc<small>Control room</small></span></a><nav className="admin-tabs" aria-label="Admin sections">{visibleTabs.map((item) => { const Icon = tabInfo[item].icon; return <button type="button" aria-current={tab === item ? 'page' : undefined} className={tab === item ? 'active' : ''} key={item} onClick={() => switchTab(item)}><Icon size={18} /><span>{tabInfo[item].label}</span>{item === 'inbox' ? <b>{messages.length}</b> : isContentTab(item) ? <b>{data[item].length}</b> : null}</button> })}</nav><a className="admin-public-link" href="/">View public site ↗</a><div className="admin-account"><span>{admin.email}<small>{isAdmin ? 'Administrator' : 'Content editor'}</small></span><button onClick={logout}><LogOut size={15} /> Sign out</button></div></aside>
     <div className="admin-workspace"><header className="admin-topbar"><div><span className="admin-kicker">Workspace / {tabInfo[tab].label}</span><h1>{tabInfo[tab].label}</h1><p className="admin-muted">{tabInfo[tab].detail}</p></div></header>
     {notice && <div className="admin-notice" role="status">{notice}<button aria-label="Dismiss notification" onClick={() => setNotice('')}><X size={16} /></button></div>}
-    {tab === 'hero' ? <HeroAsset value={heroAsset} onChange={setHeroAsset} onSave={saveHero} announcement={announcement} onAnnouncement={setAnnouncement} /> : tab === 'inbox' ? <Inbox messages={messages} onRefresh={refreshMessages} /> : tab === 'admins' ? <TeamAccess admin={admin} /> : loading ? <div className="admin-list admin-loading" role="status">Loading {tabInfo[tab].label.toLowerCase()}…</div> : loadError ? <div className="admin-list"><p className="admin-error" role="alert">{loadError}</p><button className="admin-secondary" onClick={refresh}>Try again</button></div> : <ContentPanel key={tab} tab={tab} data={data} editing={editing} setEditing={setEditing} onDelete={remove} onSaved={() => { setEditing(null); setNotice('Changes saved.'); refresh() }} onRefresh={refresh} />}
-    <PasswordChange notify={setNotice} /></div>
+    {tab === 'hero' ? <HeroAsset value={heroAsset} onChange={setHeroAsset} onSave={saveHero} announcement={announcement} onAnnouncement={setAnnouncement} /> : tab === 'inbox' ? <Inbox messages={messages} onRefresh={refreshMessages} /> : tab === 'admins' ? <TeamAccess admin={admin} /> : tab === 'account' ? <section className="admin-list"><div className="admin-team-row"><div className="admin-team-identity"><span className="admin-row-mark"><Users size={18} /></span><div><strong>{admin.email}</strong><small>Your account</small></div></div><span className="admin-role">{admin.role}</span><div className="admin-team-actions"><PasswordChange notify={setNotice} /></div></div></section> : loading ? <div className="admin-list admin-loading" role="status">Loading {tabInfo[tab].label.toLowerCase()}…</div> : loadError ? <div className="admin-list"><p className="admin-error" role="alert">{loadError}</p><button className="admin-secondary" onClick={refresh}>Try again</button></div> : <ContentPanel key={tab} tab={tab} data={data} editing={editing} setEditing={setEditing} onDelete={remove} onSaved={() => { setEditing(null); setNotice('Changes saved.'); refresh() }} onRefresh={refresh} />}
+    </div>
   </main>
 }
 
@@ -125,19 +125,27 @@ function PasswordChange({ notify }: { notify: (message: string) => void }) {
   const [open, setOpen] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    if (open) formRef.current?.querySelector('input')?.focus()
+  }, [open])
+  const clear = () => { setCurrentPassword(''); setNewPassword(''); setConfirmation(''); setError('') }
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); setBusy(true); setError('')
+    event.preventDefault(); setError('')
+    if (newPassword !== confirmation) { setError('The new passwords do not match.'); return }
+    setBusy(true)
     try {
       const response = await fetch('/api/auth', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ currentPassword, newPassword }) })
       const result = await response.json().catch(() => ({})) as { error?: string }
       if (!response.ok) { setError(result.error ?? 'Could not change password'); return }
-      setCurrentPassword(''); setNewPassword(''); setOpen(false); notify('Password changed.')
+      clear(); setOpen(false); notify('Your password has been changed.')
     } catch { setError('Could not connect. Please try again.') }
     finally { setBusy(false) }
   }
-  return <section className="admin-inbox admin-panel admin-security"><div className="admin-list-head"><div><span className="admin-kicker">Your account</span><h2>Password & security</h2></div><button className="admin-secondary" disabled={busy} onClick={() => { setOpen(!open); setCurrentPassword(''); setNewPassword(''); setError('') }}>{open ? 'Cancel' : 'Change password'}</button></div>{open && <form className="admin-form" onSubmit={submit} aria-busy={busy}><PasswordField label="Current password" value={currentPassword} onChange={setCurrentPassword} autoComplete="current-password" /><PasswordField label="New password (8+ characters)" value={newPassword} onChange={setNewPassword} minLength={8} />{error && <p className="admin-error" role="alert">{error}</p>}<button className="admin-primary" disabled={busy}>{busy ? 'Saving…' : 'Save new password'}</button></form>}</section>
+  return <div className="admin-self-password"><button type="button" className="admin-secondary" disabled={busy} aria-expanded={open} onClick={() => { setOpen(!open); clear() }}><KeyRound size={15} />{open ? 'Cancel' : 'Change password'}</button>{open && <form ref={formRef} className="admin-form" aria-label="Change your password" onSubmit={submit} aria-busy={busy}><h3>Change your password</h3><PasswordField label="Current password" value={currentPassword} onChange={setCurrentPassword} autoComplete="current-password" /><PasswordField label="New password (8+ characters)" value={newPassword} onChange={setNewPassword} minLength={8} /><PasswordField label="Confirm new password" value={confirmation} onChange={setConfirmation} minLength={8} />{error && <p className="admin-error" role="alert">{error}</p>}<button className="admin-primary" disabled={busy}>{busy ? 'Saving…' : 'Save new password'}</button></form>}</div>
 }
 
 function ContentPanel({ tab, data, editing, setEditing, onDelete, onSaved, onRefresh }: { tab: ContentTab; data: AdminData; editing: AdminRecord | null; setEditing: (record: AdminRecord | null) => void; onDelete: (type: ContentTab, id: number) => void; onSaved: () => void; onRefresh: () => void }) {
@@ -437,7 +445,7 @@ function TeamAccess({ admin }: { admin: AdminSession }) {
   return <section className="admin-team">
     <div className="admin-list"><div className="admin-list-head"><div><span className="admin-kicker">Access directory</span><h2>Team accounts</h2></div><span className="admin-role">{accounts.length} accounts</span></div>
       {notice && <p className="admin-notice" role="status">{notice}</p>}
-      {loading ? <p className="admin-muted" role="status">Loading accounts…</p> : loadError ? <div><p className="admin-error" role="alert">{loadError}</p><button className="admin-secondary" onClick={load}>Try again</button></div> : accounts.map((account) => <div className="admin-team-row" key={account.id}><div className="admin-team-identity"><span className="admin-row-mark"><Users size={18} /></span><div><strong>{account.email}</strong><small>{account.id === admin.id ? 'Your account' : account.role === 'admin' ? 'Full control room access' : 'Content and inbox access'}</small></div></div><span className="admin-role">{account.role || 'admin'}</span><div className="admin-team-actions">{account.id !== admin.id && <><button className="admin-secondary" disabled={busy} onClick={() => chooseTarget(account)}><KeyRound size={15} /> Reset password</button><button className="admin-remove" disabled={busy} aria-label={`Remove ${account.email}`} onClick={() => remove(account)}><Trash2 size={16} /></button></>}</div></div>)}
+      {loading ? <p className="admin-muted" role="status">Loading accounts…</p> : loadError ? <div><p className="admin-error" role="alert">{loadError}</p><button className="admin-secondary" onClick={load}>Try again</button></div> : accounts.map((account) => <div className="admin-team-row" key={account.id}><div className="admin-team-identity"><span className="admin-row-mark"><Users size={18} /></span><div><strong>{account.email}</strong><small>{account.id === admin.id ? 'Your account' : account.role === 'admin' ? 'Full control room access' : 'Content and inbox access'}</small></div></div><span className="admin-role">{account.role || 'admin'}</span><div className="admin-team-actions">{account.id === admin.id ? <PasswordChange notify={setNotice} /> : <><button className="admin-secondary" disabled={busy} onClick={() => chooseTarget(account)}><KeyRound size={15} /> Reset password</button><button className="admin-remove" disabled={busy} aria-label={`Remove ${account.email}`} onClick={() => remove(account)}><Trash2 size={16} /></button></>}</div></div>)}
     </div>
     <aside className="admin-editor" ref={editorRef}>{error && <p className="admin-error" role="alert">{error}</p>}{target ? <><div className="admin-editor-head"><div><span className="admin-kicker">Account recovery</span><h2>Reset password</h2></div><button disabled={busy} aria-label="Cancel password reset" onClick={() => chooseTarget(null)}><X size={18} /></button></div><p className="admin-muted">Set a new password for <strong>{target.email}</strong>. This signs them out on every device.</p><form className="admin-form" onSubmit={reset} aria-busy={busy}><PasswordField label="Your current password" value={currentPassword} onChange={setCurrentPassword} autoComplete="current-password" /><PasswordField label="New password (8+ characters)" value={newPassword} onChange={setNewPassword} minLength={8} /><PasswordField label="Confirm new password" value={confirmation} onChange={setConfirmation} minLength={8} /><p className="admin-muted admin-help">Share the new password with the account owner privately.</p><button className="admin-primary" disabled={busy}>{busy ? 'Resetting…' : 'Reset password'}</button><button type="button" className="admin-secondary" disabled={busy} onClick={() => chooseTarget(null)}>Cancel</button></form></> : <><div className="admin-editor-head"><div><span className="admin-kicker">Grow the team</span><h2>Add an account</h2></div><Plus size={20} /></div><p className="admin-muted">Create access for a club member. Editors manage content; admins also manage the homepage and team.</p><form className="admin-form" onSubmit={invite} aria-busy={busy}><label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="off" required maxLength={254} placeholder="member@techsoc.in" /></label><PasswordField label="Initial password (8+ characters)" value={password} onChange={setPassword} minLength={8} /><label>Access level<select value={role} onChange={(event) => setRole(event.target.value)}><option value="editor">Editor — content & inbox</option><option value="admin">Admin — full access</option></select></label><button className="admin-primary" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button></form></>}</aside>
   </section>

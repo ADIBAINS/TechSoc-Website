@@ -281,3 +281,7 @@
 @media(prefers-reduced-motion:reduce){.admin-page *{transition:none;scroll-behavior:auto}.admin-page button:active:not(:disabled){transform:none}}
 .admin-security .admin-form{max-width:420px}
 @media(max-width:480px){.admin-team-row{grid-template-columns:minmax(0,1fr)}.admin-team-row>.admin-role{justify-self:start;margin-left:48px}.admin-team-actions{grid-column:1}}
+/* Account security lives with its account row. */
+.admin-self-password{width:100%;min-width:0}
+.admin-self-password .admin-form{max-width:420px;margin-top:20px;padding-top:20px;border-top:1px solid var(--reference-line)}
+.admin-self-password h3{margin:0;color:var(--reference-ink);font:600 16px var(--font-admin-display);letter-spacing:-.02em}
