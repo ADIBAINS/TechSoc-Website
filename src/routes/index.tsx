@@ -26,7 +26,6 @@ import {
 import { motion, useReducedMotion } from 'framer-motion'
 import { EVENT_KINDS, eventCategory, eventKind, type EventCategory } from '../lib/eventKinds'
 import { collectMedia, mediaKind, type MediaItem } from '../lib/media'
-import { WorksGallery, REFERENCE_MODEL } from '../components/WorksGallery'
 import { MediaSurface } from '../components/MediaSurface'
 import { Carousel, usePerView } from '../components/Carousel'
 import { getPublicContent, type Content, type Member, type EventItem, type Memory } from '../lib/public-content'
@@ -117,7 +116,8 @@ function HomePage() {
   const visibleEvents = filter === 'all' ? events : events.filter((event) => event.category === filter)
   const activeFilter = filter === 'all' ? null : EVENT_KINDS.find((kind) => kind.value === filter) ?? null
   const memories = (content.memories.length ? content.memories : fallbackMemories).map((memory) => ({ ...memory, media: memory.media?.length ? memory.media : collectMedia([{ path: memory.image_path, caption: memory.caption }]) }))
-  const heroAsset = typeof content.settings?.hero_asset === 'string' && content.settings.hero_asset ? content.settings.hero_asset : REFERENCE_MODEL
+  const savedHeroAsset = content.settings?.hero_asset
+  const heroAsset = typeof savedHeroAsset === 'string' && savedHeroAsset && !/\/techsoc-hero\.glb(?:\?.*)?$/i.test(savedHeroAsset) ? savedHeroAsset : '/models/techsoc.glb'
   const announcement = content.settings?.announcement as unknown as { enabled?: boolean; text?: string; link?: string } | undefined
   const [announceDismissed, setAnnounceDismissed] = useState('')
   useEffect(() => {
@@ -151,13 +151,13 @@ function HomePage() {
           <a className="reference-brand" href="#home" aria-label="techsoc home"><span className="reference-mark" /><span><strong>techsoc</strong><small>community club</small></span></a>
           <div className="season-status"><i /> Season 2025 · Open to all</div>
           <nav className="reference-nav" aria-label="Main navigation">
-            {['Home', 'About', 'Team', 'Events', '3D Works', 'Past Glimpses', 'Community'].map((item) => <a href={`#${item === 'Home' ? 'home' : item === 'Past Glimpses' ? 'glimpses' : item === '3D Works' ? 'works' : item.toLowerCase()}`} key={item}>{item}</a>)}
+            {['Home', 'About', 'Team', 'Events', 'Past Glimpses', 'Community'].map((item) => <a href={`#${item === 'Home' ? 'home' : item === 'Past Glimpses' ? 'glimpses' : item.toLowerCase()}`} key={item}>{item}</a>)}
           </nav>
           <div className="reference-actions"><a className="meetups-link" href="#events"><CalendarDays size={17} /> Meetups</a><a className="notched-button compact" href="#contact">Join techsoc <ArrowRight size={16} /></a></div>
           <button className="reference-menu" type="button" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button>
         </div>
         <nav className={menuOpen ? 'reference-mobile-nav is-open' : 'reference-mobile-nav'} aria-label="Mobile navigation">
-          {['Home', 'About', 'Team', 'Events', '3D Works', 'Past Glimpses', 'Community'].map((item) => <a href={`#${item === 'Home' ? 'home' : item === 'Past Glimpses' ? 'glimpses' : item === '3D Works' ? 'works' : item.toLowerCase()}`} key={item} onClick={() => setMenuOpen(false)}>{item}</a>)}
+          {['Home', 'About', 'Team', 'Events', 'Past Glimpses', 'Community'].map((item) => <a href={`#${item === 'Home' ? 'home' : item === 'Past Glimpses' ? 'glimpses' : item.toLowerCase()}`} key={item} onClick={() => setMenuOpen(false)}>{item}</a>)}
         </nav>
       </header>
       <div className="reference-header-spacer" aria-hidden="true" />
@@ -183,8 +183,6 @@ function HomePage() {
         <section className="reference-events band" id="events"><div className="shell"><div className="reference-section-row"><SectionHeading eyebrow="Gatherings & meetups" title="Upcoming Events" copy="Join us in person or tune in online. All sessions are free and open to everyone in the tech community." /><div className="reference-filter" aria-label="Event filters"><button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All events</button>{EVENT_KINDS.map((kind) => <button key={kind.value} className={filter === kind.value ? 'active' : ''} onClick={() => setFilter(kind.value)}>{kind.filter}</button>)}</div></div><Carousel label="Upcoming events" perView={eventPerView} className="carousel-events">{visibleEvents.map((event) => <EventCard event={event} reserved={reserved === event.id} onReserve={reserve} key={event.id} />)}</Carousel>{!visibleEvents.length && <div className="event-empty"><p>No {activeFilter ? activeFilter.filter.toLowerCase() : 'events'} scheduled right now.</p><button onClick={() => setFilter('all')}>Show all events</button></div>}</div></section>
 
         {sponsors.length > 0 && <section className="reference-sponsors shell section-padding" id="sponsors"><div className="reference-rule" /><SectionHeading eyebrow="Backed by" title="Our Sponsors" copy="The teams whose support keeps meetups free, food warm, and hackathons loud." /><div className="sponsor-grid">{sponsors.map((sponsor) => <a className="sponsor-card" href={sponsor.url || '#sponsors'} key={sponsor.id} target={sponsor.url ? '_blank' : undefined} rel="noreferrer">{sponsor.logo_path ? <img src={sponsor.logo_path} alt={`${sponsor.name} logo`} loading="lazy" decoding="async" width={128} height={64} /> : <span>{sponsor.name.slice(0, 1)}</span>}<strong>{sponsor.name}</strong><small>{sponsor.tier || 'Community'}</small></a>)}</div></section>}
-
-        <WorksGallery works={content.works ?? []} onExpand={(title, items) => setViewer({ title, items, index: 0 })} />
 
         <section className="reference-archive shell section-padding" id="glimpses">
           <div className="reference-rule" />

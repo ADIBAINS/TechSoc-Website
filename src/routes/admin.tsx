@@ -14,7 +14,7 @@ type AdminData = { members: AdminRecord[]; events: AdminRecord[]; memories: Admi
 type MediaRow = { id: number; path: string; kind: string; caption: string; sort_order: number }
 type ContentTab = keyof AdminData
 type Tab = ContentTab | 'hero' | 'inbox' | 'admins' | 'account'
-const contentTabs: ContentTab[] = ['members', 'events', 'memories', 'works', 'sponsors']
+const contentTabs: ContentTab[] = ['members', 'events', 'memories', 'sponsors']
 const emptyData: AdminData = { members: [], events: [], memories: [], sponsors: [], works: [] }
 const isContentTab = (tab: Tab): tab is ContentTab => (contentTabs as string[]).includes(tab)
 // Naive de-pluralising breaks on "memories" -> "memorie", so map it explicitly.
@@ -94,7 +94,7 @@ function Dashboard({ admin, onLogout }: { admin: AdminSession; onLogout: () => v
   useEffect(() => {
     if (tab !== 'hero' || heroAsset) return
     fetch('/api/settings').then((response) => response.ok ? response.json() : null).then((settings) => {
-      if (settings?.hero_asset) setHeroAsset(settings.hero_asset)
+      setHeroAsset(typeof settings?.hero_asset === 'string' && settings.hero_asset && !/\/techsoc-hero\.glb(?:\?.*)?$/i.test(settings.hero_asset) ? settings.hero_asset : '/models/techsoc.glb')
       if (settings?.announcement && typeof settings.announcement === 'object') {
         setAnnouncement({
           enabled: !!settings.announcement.enabled,
