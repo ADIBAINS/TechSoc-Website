@@ -1,4 +1,4 @@
-import { createElement, useEffect, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import {
   ArrowRight,
@@ -9,7 +9,6 @@ import {
   Code2,
   ExternalLink,
   Github,
-  HandHeart,
   Heart,
   Images,
   Lightbulb,
@@ -26,38 +25,21 @@ import {
 } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { EVENT_KINDS, eventCategory, eventKind, type EventCategory } from '../lib/eventKinds'
-import { collectMedia, type MediaItem } from '../lib/media'
+import { collectMedia, mediaKind, type MediaItem } from '../lib/media'
 import { MediaSurface } from '../components/MediaSurface'
 import { Carousel, usePerView } from '../components/Carousel'
-import { MediaViewer } from '../components/MediaViewer'
+import { getPublicContent, type Content, type Member, type EventItem, type Memory } from '../lib/public-content'
 
-export const Route = createFileRoute('/')({ component: HomePage })
+const MediaViewer = lazy(() => import('../components/MediaViewer').then((module) => ({ default: module.MediaViewer })))
 
-type Member = {
-  id: number
-  name: string
-  role?: string
-  bio?: string
-  image_path?: string
-  github_url?: string
-  linkedin_url?: string
-  portfolio_url?: string
-}
+export const Route = createFileRoute('/')({
+  loader: async (): Promise<Content> => {
+    try { return await getPublicContent() }
+    catch { return { members: [], events: [], memories: [] } }
+  },
+  component: HomePage,
+})
 
-type EventItem = {
-  id: number
-  title: string
-  kind?: string
-  description?: string
-  starts_at?: string
-  location?: string
-  registration_url?: string
-  cover_image_path?: string
-}
-
-type Memory = { id: number; title: string; caption?: string; image_path?: string; media?: MediaItem[] }
-type Sponsor = { id: number; name: string; logo_path?: string; url?: string; tier?: string }
-type Content = { members: Member[]; events: EventItem[]; memories: Memory[]; sponsors?: Sponsor[]; settings?: Record<string, string> }
 type DisplayEvent = EventItem & { category: EventCategory; kindLabel: string; meta: string; cta: string; mode: 'map' | 'video' | 'users' }
 type Viewer = { title: string; items: MediaItem[]; index: number }
 
@@ -98,24 +80,28 @@ function toDisplayEvent(event: EventItem): DisplayEvent {
 }
 
 function HomePage() {
-  const [content, setContent] = useState<Content>({ members: [], events: [], memories: [] })
+  const content = Route.useLoaderData()
+  const headerRef = useRef<HTMLElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [filter, setFilter] = useState<'all' | EventCategory>('all')
   const [reserved, setReserved] = useState<number | null>(null)
   const [toast, setToast] = useState('')
   const [viewer, setViewer] = useState<Viewer | null>(null)
-  const reducedMotion = useReducedMotion()
   const teamPerView = usePerView(4, 2, 1)
   const eventPerView = usePerView(3, 2, 1)
   const galleryPerView = usePerView(3, 2, 1)
 
   useEffect(() => {
-    let active = true
-    fetch('/api/content')
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data: Content) => { if (active) setContent(data) })
-      .catch(() => {})
-    return () => { active = false }
+    const header = headerRef.current
+    if (!header) return
+    const measure = () => document.documentElement.style.setProperty('--reference-header-height', `${header.getBoundingClientRect().height}px`)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(header)
+    return () => {
+      observer.disconnect()
+      document.documentElement.style.removeProperty('--reference-header-height')
+    }
   }, [])
 
   useEffect(() => {
@@ -130,29 +116,19 @@ function HomePage() {
   const visibleEvents = filter === 'all' ? events : events.filter((event) => event.category === filter)
   const activeFilter = filter === 'all' ? null : EVENT_KINDS.find((kind) => kind.value === filter) ?? null
   const memories = (content.memories.length ? content.memories : fallbackMemories).map((memory) => ({ ...memory, media: memory.media?.length ? memory.media : collectMedia([{ path: memory.image_path, caption: memory.caption }]) }))
-  const totalMedia = memories.reduce((total, memory) => total + (memory.media?.length ?? 0), 0)
-  const heroAsset = content.settings?.hero_asset || heroImage
+  const heroAsset = typeof content.settings?.hero_asset === 'string' && content.settings.hero_asset ? content.settings.hero_asset : heroImage
   const announcement = content.settings?.announcement as unknown as { enabled?: boolean; text?: string; link?: string } | undefined
-  const [announceDismissed, setAnnounceDismissed] = useState(() => {
-    try { return window.localStorage.getItem('techsoc-announcement-dismissed') || '' } catch { return '' }
-  })
+  const [announceDismissed, setAnnounceDismissed] = useState('')
+  useEffect(() => {
+    try { setAnnounceDismissed(window.localStorage.getItem('techsoc-announcement-dismissed') || '') } catch {}
+  }, [])
   const showAnnouncement = !!announcement?.enabled && !!announcement?.text && announceDismissed !== announcement.text
   const dismissAnnouncement = () => {
     if (!announcement?.text) return
     try { window.localStorage.setItem('techsoc-announcement-dismissed', announcement.text) } catch {}
     setAnnounceDismissed(announcement.text)
   }
-  const heroIsVideo = /\.(mp4|webm|ogg)(\?.*)?$/i.test(heroAsset)
   const heroIsModel = /\.(glb|gltf)(\?.*)?$/i.test(heroAsset)
-  useEffect(() => {
-    if (!heroIsModel || customElements.get('model-viewer')) return
-    const script = document.createElement('script')
-    script.type = 'module'
-    script.src = 'https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js'
-    document.head.appendChild(script)
-    return () => { script.remove() }
-  }, [heroIsModel])
-
   const showToast = (message: string) => setToast(message)
   const openViewer = (memory: Memory) => {
     const items = memory.media ?? []
@@ -168,9 +144,8 @@ function HomePage() {
   return (
     <div className="reference-site">
       <div className={toast ? 'reference-toast is-visible' : 'reference-toast'} role="status" aria-live="polite"><span><Check size={16} /></span>{toast}</div>
-      {showAnnouncement && <div className="announce-bar" role="status"><span>{announcement!.text}</span>{announcement!.link && <a href={announcement!.link}>Learn more</a>}<button onClick={dismissAnnouncement} aria-label="Dismiss announcement"><X size={15} /></button></div>}
 
-      <header className="reference-header">
+      <header className="reference-header" ref={headerRef}>
         <div className="reference-nav-shell">
           <a className="reference-brand" href="#home" aria-label="techsoc home"><span className="reference-mark" /><span><strong>techsoc</strong><small>community club</small></span></a>
           <div className="season-status"><i /> Season 2025 · Open to all</div>
@@ -184,28 +159,29 @@ function HomePage() {
           {['Home', 'About', 'Team', 'Events', 'Past Glimpses', 'Community'].map((item) => <a href={`#${item === 'Home' ? 'home' : item === 'Past Glimpses' ? 'glimpses' : item.toLowerCase()}`} key={item} onClick={() => setMenuOpen(false)}>{item}</a>)}
         </nav>
       </header>
+      <div className="reference-header-spacer" aria-hidden="true" />
+      {showAnnouncement && <div className="announce-bar" role="status"><span>{announcement!.text}</span>{announcement!.link && <a href={announcement!.link}>Learn more</a>}<button onClick={dismissAnnouncement} aria-label="Dismiss announcement"><X size={15} /></button></div>}
 
       <main>
         <section className="reference-hero shell" id="home">
-          <motion.div className="reference-hero-copy" initial={reducedMotion ? false : { opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={transition}>
-            <div className="reference-kicker"><i /> A warm, friendly tech community</div>
+          <motion.div className="reference-hero-copy" initial={false} animate={{ opacity: 1, y: 0 }} transition={transition}>
             <h1>A vibrant community for <em>builders</em>, <b>designers</b> &amp; technologists.</h1>
             <p>techsoc brings curious minds together to craft real software, tinker with hardware, and learn new skills. No gatekeeping, no intimidating barriers—just genuine people building things that matter.</p>
             <div className="reference-hero-buttons"><a className="notched-button" href="#contact"><UsersRound size={19} /> Join Discord Community <ArrowRight size={18} /></a><a className="reference-secondary-button" href="#events"><CalendarDays size={19} /> Explore Upcoming Events</a></div>
             <div className="reference-metrics"><Metric value="1,500+" label="Active Builders" /><Metric value="24+" label="Workshops Held" accent /><Metric value="100%" label="Community-Driven" accent /></div>
           </motion.div>
-          <motion.div className="reference-hero-visual" initial={reducedMotion ? false : { opacity: 0, y: 28, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...transition, delay: .16 }}>
-            <div className={heroIsModel ? 'hero-photo-card is-model' : 'hero-photo-card'}>{heroIsModel ? createElement('model-viewer', { src: heroAsset, 'camera-controls': true, 'auto-rotate': true, 'interaction-prompt': 'none', 'aria-label': 'techsoc Blender hero animation' }) : heroIsVideo ? <video src={heroAsset} autoPlay loop muted playsInline aria-label="techsoc Blender hero animation" /> : <img src={heroAsset} alt="Community builders collaborating together at a techsoc hackathon" />}<div className="photo-shade" /><div className="hero-photo-note"><span className="note-icon"><UsersRound size={20} /></span><span><strong>Spring Community Hackathon</strong><small>180+ creators shipped prototypes in 36 hours</small></span><b><i /> In-person &amp; Hybrid</b></div></div>
+          <motion.div className="reference-hero-visual" initial={false} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...transition, delay: .16 }}>
+            <div className={heroIsModel ? 'hero-photo-card is-model' : 'hero-photo-card'}><MediaSurface item={{ path: heroAsset, kind: mediaKind(heroAsset) }} alt="Community builders collaborating together at a techsoc hackathon" className="hero-media" eager autoRotate autoPlay /><div className="photo-shade" /><div className="hero-photo-note"><span className="note-icon"><UsersRound size={20} /></span><span><strong>Spring Community Hackathon</strong><small>180+ creators shipped prototypes in 36 hours</small></span><b><i /> In-person &amp; Hybrid</b></div></div>
           </motion.div>
         </section>
 
         <section className="reference-about band" id="about"><div className="shell"><SectionHeading eyebrow="What we are about" title="Learning, building, and growing side-by-side." copy="techsoc was founded on a simple belief: modern technology is exciting, and learning it is far more fun when done collaboratively. Whether you wrote your first line of code yesterday or lead engineering teams, you belong here." /><div className="pillar-grid"><Pillar icon={<Lightbulb />} title="Hands-on Workshops" copy="Bi-weekly interactive labs led by community mentors covering AI fundamentals, web design craft, cloud architecture, and embedded systems." foot="Beginner & advanced tracks" /><Pillar icon={<Rocket />} title="Demo Nights" copy="A judgment-free stage to show off side projects, early MVPs, design redesigns, or robotics experiments. Instant constructive feedback from peers." foot="Monthly community showcases" /><Pillar icon={<Code2 />} title="Collaborative Projects" copy="Team up with designers, developers, and writers to build open-source tools, hackathon entries, and civic tech that benefits the broader community." foot="Open source & public bounties" /></div></div></section>
 
-        <section className="reference-team shell section-padding" id="team"><div className="reference-rule" /><div className="reference-section-row"><SectionHeading eyebrow="The people behind techsoc" title="Meet the Core Team" copy="The builders behind techsoc's events, programs, and community initiatives. Dedicated to creating an inclusive, empowering space." /><span className="volunteer-note"><HandHeart size={18} /> {members.length} {members.length === 1 ? 'member' : 'members'} · volunteer organized</span></div><Carousel label="Core team members" perView={teamPerView} className="carousel-team">{members.map((member) => <TeamCard member={member} delay={0} key={member.id} />)}</Carousel></section>
+        <section className="reference-team shell section-padding" id="team"><div className="reference-rule" /><div className="reference-section-row"><SectionHeading eyebrow="The people behind techsoc" title="Meet the Core Team" copy="The builders behind techsoc's events, programs, and community initiatives. Dedicated to creating an inclusive, empowering space." /></div><Carousel label="Core team members" perView={teamPerView} className="carousel-team">{members.map((member) => <TeamCard member={member} delay={0} key={member.id} />)}</Carousel></section>
 
         <section className="reference-events band" id="events"><div className="shell"><div className="reference-section-row"><SectionHeading eyebrow="Gatherings & meetups" title="Upcoming Events" copy="Join us in person or tune in online. All sessions are free and open to everyone in the tech community." /><div className="reference-filter" aria-label="Event filters"><button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All events</button>{EVENT_KINDS.map((kind) => <button key={kind.value} className={filter === kind.value ? 'active' : ''} onClick={() => setFilter(kind.value)}>{kind.filter}</button>)}</div></div><Carousel label="Upcoming events" perView={eventPerView} className="carousel-events">{visibleEvents.map((event) => <EventCard event={event} reserved={reserved === event.id} onReserve={reserve} key={event.id} />)}</Carousel>{!visibleEvents.length && <div className="event-empty"><p>No {activeFilter ? activeFilter.filter.toLowerCase() : 'events'} scheduled right now.</p><button onClick={() => setFilter('all')}>Show all events</button></div>}</div></section>
 
-        {sponsors.length > 0 && <section className="reference-sponsors shell section-padding" id="sponsors"><div className="reference-rule" /><SectionHeading eyebrow="Backed by" title="Our Sponsors" copy="The teams whose support keeps meetups free, food warm, and hackathons loud." /><div className="sponsor-grid">{sponsors.map((sponsor) => <a className="sponsor-card" href={sponsor.url || '#sponsors'} key={sponsor.id} target={sponsor.url ? '_blank' : undefined} rel="noreferrer">{sponsor.logo_path ? <img src={sponsor.logo_path} alt={`${sponsor.name} logo`} loading="lazy" /> : <span>{sponsor.name.slice(0, 1)}</span>}<strong>{sponsor.name}</strong><small>{sponsor.tier || 'Community'}</small></a>)}</div></section>}
+        {sponsors.length > 0 && <section className="reference-sponsors shell section-padding" id="sponsors"><div className="reference-rule" /><SectionHeading eyebrow="Backed by" title="Our Sponsors" copy="The teams whose support keeps meetups free, food warm, and hackathons loud." /><div className="sponsor-grid">{sponsors.map((sponsor) => <a className="sponsor-card" href={sponsor.url || '#sponsors'} key={sponsor.id} target={sponsor.url ? '_blank' : undefined} rel="noreferrer">{sponsor.logo_path ? <img src={sponsor.logo_path} alt={`${sponsor.name} logo`} loading="lazy" decoding="async" width={128} height={64} /> : <span>{sponsor.name.slice(0, 1)}</span>}<strong>{sponsor.name}</strong><small>{sponsor.tier || 'Community'}</small></a>)}</div></section>}
 
         <section className="reference-archive shell section-padding" id="glimpses">
           <div className="reference-rule" />
@@ -215,18 +191,11 @@ function HomePage() {
               title="Moments worth keeping."
               copy="Every gathering leaves something behind — a prototype that shipped, a whiteboard full of sketches, a room that stayed loud until midnight. Open any card to see the full set of photos, clips, and 3D files from that day."
             />
-            <span className="archive-stats">
-              <b>{memories.length}</b>
-              <small>{memories.length === 1 ? 'moment' : 'moments'}</small>
-              <i />
-              <b>{totalMedia}</b>
-              <small>{totalMedia === 1 ? 'media file' : 'media files'}</small>
-            </span>
           </div>
           <Carousel label="The archive" perView={galleryPerView} className="carousel-gallery">
             {memories.map((memory) => <GalleryCard memory={memory} onOpen={() => openViewer(memory)} key={memory.id} />)}
           </Carousel>
-          {viewer && <MediaViewer title={viewer.title} items={viewer.items} index={viewer.index} onIndexChange={(next) => setViewer({ ...viewer, index: next })} onClose={() => setViewer(null)} />}
+          {viewer && <Suspense fallback={<div className="media-viewer" role="dialog" aria-modal="true" aria-label="Loading media viewer"><button className="admin-secondary" onClick={() => setViewer(null)}>Close</button><p role="status">Loading gallery…</p></div>}><MediaViewer title={viewer.title} items={viewer.items} index={viewer.index} onIndexChange={(next) => setViewer({ ...viewer, index: next })} onClose={() => setViewer(null)} /></Suspense>}
         </section>
 
         <section className="reference-contact band" id="community"><div className="shell contact-grid"><div className="contact-copy"><SectionHeading eyebrow="Get involved" title="Enter the community." copy="Whether you want to showcase a project, give a 10-minute lightning talk, suggest a workshop topic, or just hang out with fellow makers, we’d love to welcome you." /><div className="community-links"><CommunityLink icon={<MessageCircle />} title="Discord Community" sub="Daily chat, project help & channels" /><CommunityLink icon={<Github />} title="GitHub Organization" sub="github.com/techsoc — Open repos" /><CommunityLink icon={<Mail />} title="Email the Organizers" sub="hello@techsoc.org" href="mailto:hello@techsoc.org" /></div><div className="inclusive-note"><Heart size={19} /> techsoc is open to all skill levels. Everyone is welcome to learn, share, and collaborate in a kind and inclusive environment.</div></div><ContactForm notify={showToast} /></div></section>
@@ -249,7 +218,7 @@ function Pillar({ icon, title, copy, foot }: { icon: React.ReactNode; title: str
 
 function TeamCard({ member, delay }: { member: Member; delay: number }) {
   const reducedMotion = useReducedMotion()
-  return <motion.article className="team-card" initial={reducedMotion ? false : { opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .15 }} transition={{ ...transition, delay }} whileHover={{ y: -8 }}><div className="team-photo">{member.image_path ? <img src={member.image_path} alt={`${member.name} — ${member.role || 'community member'}`} loading="lazy" /> : <span>{member.name.slice(0, 1)}</span>}</div><div className="team-copy"><h3 title={member.name}>{member.name}</h3><strong title={member.role || 'Community member'}>{member.role || 'Community member'}</strong><p className="team-bio" title={member.bio}>{member.bio || 'Part of the friendly group of people that makes techsoc happen.'}</p></div><div className="team-socials"><a href={member.github_url || '#team'} aria-label={`${member.name}'s GitHub`}><Github size={17} /></a><a href={member.linkedin_url || '#team'} aria-label={`${member.name}'s LinkedIn`}><Link2 size={17} /></a><a href={member.portfolio_url || '#team'} aria-label={`${member.name}'s portfolio`}><ExternalLink size={17} /></a></div></motion.article>
+  return <motion.article className="team-card" initial={reducedMotion ? false : { opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .15 }} transition={{ ...transition, delay }} whileHover={{ y: -8 }}><div className="team-photo">{member.image_path ? <img src={member.image_path} alt={`${member.name} — ${member.role || 'community member'}`} loading="lazy" decoding="async" width={400} height={400} /> : <span>{member.name.slice(0, 1)}</span>}</div><div className="team-copy"><h3 title={member.name}>{member.name}</h3><strong title={member.role || 'Community member'}>{member.role || 'Community member'}</strong><p className="team-bio" title={member.bio}>{member.bio || 'Part of the friendly group of people that makes techsoc happen.'}</p></div><div className="team-socials"><a href={member.github_url || '#team'} aria-label={`${member.name}'s GitHub`}><Github size={17} /></a><a href={member.linkedin_url || '#team'} aria-label={`${member.name}'s LinkedIn`}><Link2 size={17} /></a><a href={member.portfolio_url || '#team'} aria-label={`${member.name}'s portfolio`}><ExternalLink size={17} /></a></div></motion.article>
 }
 
 function EventCard({ event, reserved, onReserve }: { event: DisplayEvent; reserved: boolean; onReserve: (event: DisplayEvent) => void }) {

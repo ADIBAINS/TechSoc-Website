@@ -25,6 +25,7 @@ export const contactSchema = z.object({
   involvement: z.string().trim().max(200).optional().default(''),
   message: z.string().trim().min(1).max(5000),
 })
+export const contactDeleteSchema = z.object({ id })
 
 // /api/admin-content — data keys are allowlisted again by pickedFields;
 // zod enforces shape + required fields per type.

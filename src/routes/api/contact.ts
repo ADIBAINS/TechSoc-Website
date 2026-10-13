@@ -1,13 +1,28 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { dbAll, dbRun } from '../../server/db.server'
-import { authenticate, csrfBlock } from '../../server/auth.server'
+import { dbAll, dbGet, dbRun, logAction } from '../../server/db.server'
+import { authenticate, csrfBlock, requireAdmin } from '../../server/auth.server'
 import { checkRateLimit, clientIp, rateLimitResponse } from '../../server/ratelimit'
-import { contactSchema, readJson } from '../../server/validate'
+import { contactSchema, contactDeleteSchema, readJson } from '../../server/validate'
 
 export const Route = createFileRoute('/api/contact')({
   server: {
     handlers: {
       GET: async ({ request }) => (await authenticate(request)) ? Response.json(await dbAll('select * from contact_submissions order by created_at desc')) : Response.json({ error: 'Unauthorized' }, { status: 401 }),
+      DELETE: async ({ request }) => {
+        const blocked = csrfBlock(request)
+        if (blocked) return blocked
+        const session = await requireAdmin(request)
+        if (!session) return Response.json({ error: 'Admins only' }, { status: 403 })
+        const result = await readJson(request, contactDeleteSchema)
+        if ('error' in result) return result.error
+        const { id } = result.data
+        if (!await dbGet('select id from contact_submissions where id = ?', [id])) {
+          return Response.json({ error: 'Message no longer exists' }, { status: 404 })
+        }
+        await dbRun('delete from contact_submissions where id = ?', [id])
+        logAction(session.id, 'contact.delete', 'contact_submissions', id)
+        return Response.json({ ok: true })
+      },
       POST: async ({ request }) => {
         const blocked = csrfBlock(request)
         if (blocked) return blocked
