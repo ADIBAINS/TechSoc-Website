@@ -2,8 +2,9 @@ import path from 'node:path'
 import fs from 'node:fs/promises'
 import { createFileRoute } from '@tanstack/react-router'
 import { uploadDir } from '../../server/db.server'
+import { uploadContentTypes } from '../../server/upload-validation'
 
-const types: Record<string, string> = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.mp4': 'video/mp4', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json' }
+const types: Record<string, string> = { ...uploadContentTypes, '.jpeg': 'image/jpeg' }
 
 export const Route = createFileRoute('/api/uploads/$filename')({
   server: {
@@ -16,7 +17,7 @@ export const Route = createFileRoute('/api/uploads/$filename')({
         if (!types[extension]) return new Response('Not found', { status: 404 })
         try {
           const file = await fs.readFile(path.join(uploadDir, filename))
-          return new Response(file as unknown as BodyInit, { headers: { 'content-type': types[extension], 'cache-control': 'public, max-age=31536000, immutable' } })
+          return new Response(file as unknown as BodyInit, { headers: { 'content-type': types[extension], 'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff', ...(extension === '.blend' ? { 'content-disposition': `attachment; filename="${filename}"` } : {}) } })
         } catch { return new Response('Not found', { status: 404 }) }
       },
     },

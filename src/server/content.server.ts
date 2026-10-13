@@ -1,17 +1,18 @@
 import { collectMedia } from '../lib/media'
-import type { Content, EventItem, Member, Memory, Sponsor } from '../lib/public-content'
+import type { Content, EventItem, Member, Memory, Sponsor, Work } from '../lib/public-content'
 import { dbAll } from './db.server'
 
 type MediaRow = { memory_id: number; path: string; caption: string | null; sort_order: number }
 
 export async function readPublicContent(): Promise<Content> {
-  const [members, events, memoryRows, sponsors, settingsRows, mediaRows] = await Promise.all([
+  const [members, events, memoryRows, sponsors, settingsRows, mediaRows, works] = await Promise.all([
     dbAll<Member>('select * from members where published = 1 order by created_at desc'),
     dbAll<EventItem>('select * from events where published = 1 order by created_at desc'),
     dbAll<Memory>('select * from memories where published = 1 order by created_at desc'),
     dbAll<Sponsor>('select * from sponsors where published = 1 order by sort_order asc, created_at desc'),
     dbAll<{ key: string; value: string }>('select key, value from site_settings'),
     dbAll<MediaRow>('select memory_id, path, caption, sort_order from memory_media order by sort_order asc, id asc'),
+    dbAll<Work>('select * from works where published = 1 order by sort_order asc, created_at desc'),
   ])
   const settings = Object.fromEntries(settingsRows.map((item) => [item.key, JSON.parse(item.value)]))
   const coverFor = new Map(events.map((event) => [event.id, event.cover_image_path]))
@@ -29,5 +30,5 @@ export async function readPublicContent(): Promise<Content> {
       { path: memory.event_id ? coverFor.get(memory.event_id) : null },
     ]),
   }))
-  return { members, events, memories, sponsors, settings }
+  return { members, events, memories, sponsors, settings, works }
 }

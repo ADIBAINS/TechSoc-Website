@@ -34,6 +34,7 @@ create index if not exists memory_media_memory on memory_media (memory_id, sort_
 create table if not exists site_settings (key text primary key, value text not null default '{}', updated_at timestamptz not null default now());
 create table if not exists contact_submissions (id serial primary key, name text not null, email text not null, involvement text default '', message text not null, created_at timestamptz not null default now());
 create table if not exists event_rsvps (id serial primary key, event_id integer not null references events(id) on delete cascade, name text not null, email text not null, created_at timestamptz not null default now(), unique (event_id, email));
+create table if not exists works (id serial primary key, title text not null, description text default '', creator text default '', model_path text not null, source_path text default '', image_path text default '', sort_order integer default 0, published integer not null default 1, created_at timestamptz not null default now());
 create table if not exists sponsors (id serial primary key, name text not null, logo_path text, url text default '', tier text default 'Community', sort_order integer default 0, published integer not null default 1, created_at timestamptz not null default now());
 create table if not exists admin_actions (id serial primary key, admin_id integer references admins(id) on delete set null, action text not null, target_table text, target_id integer, created_at timestamptz not null default now());
 `
@@ -44,7 +45,7 @@ for (const stmt of schema.split(';').map((s) => s.trim()).filter(Boolean)) {
 const lite = new DatabaseSync(sqlitePath, { readOnly: true })
 
 // Fresh mirror: wipe + re-copy so re-runs never duplicate. Order respects FKs.
-for (const table of ['memory_media', 'memories', 'members', 'events', 'contact_submissions', 'event_rsvps', 'sponsors']) {
+for (const table of ['memory_media', 'memories', 'members', 'events', 'contact_submissions', 'event_rsvps', 'sponsors', 'works']) {
   const exists = (() => {
     try {
       lite.prepare(`select 1 from ${table} limit 1`).get()
@@ -89,7 +90,7 @@ for (const row of lite.prepare('select * from site_settings').all()) {
 console.log('site_settings: upserted')
 
 // Reset serial sequences so new inserts don't clash with mirrored ids.
-for (const table of ['admins', 'members', 'events', 'memories', 'memory_media', 'contact_submissions', 'event_rsvps', 'sponsors', 'admin_actions']) {
+for (const table of ['admins', 'members', 'events', 'memories', 'memory_media', 'contact_submissions', 'event_rsvps', 'sponsors', 'works', 'admin_actions']) {
   await sql.query(`select setval(pg_get_serial_sequence('${table}', 'id'), coalesce(max(id), 1)) from ${table}`, [])
 }
 console.log('Done. Sequences reset.')

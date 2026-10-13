@@ -32,6 +32,7 @@ create index if not exists memory_media_memory on memory_media (memory_id, sort_
 create table if not exists site_settings (key text primary key, value text not null default '{}', updated_at timestamptz not null default now());
 create table if not exists contact_submissions (id serial primary key, name text not null, email text not null, involvement text default '', message text not null, created_at timestamptz not null default now());
 create table if not exists event_rsvps (id serial primary key, event_id integer not null references events(id) on delete cascade, name text not null, email text not null, created_at timestamptz not null default now(), unique (event_id, email));
+create table if not exists works (id serial primary key, title text not null, description text default '', creator text default '', model_path text not null, source_path text default '', image_path text default '', sort_order integer default 0, published integer not null default 1, created_at timestamptz not null default now());
 create table if not exists sponsors (id serial primary key, name text not null, logo_path text, url text default '', tier text default 'Community', sort_order integer default 0, published integer not null default 1, created_at timestamptz not null default now());
 create table if not exists admin_actions (id serial primary key, admin_id integer references admins(id) on delete set null, action text not null, target_table text, target_id integer, created_at timestamptz not null default now());
 `
@@ -68,6 +69,7 @@ function getSqlite(): DatabaseSync {
   create table if not exists contact_submissions (id integer primary key, name text not null, email text not null, involvement text default '', message text not null, created_at text not null default current_timestamp);
   create table if not exists event_rsvps (id integer primary key, event_id integer not null references events(id) on delete cascade, name text not null, email text not null, created_at text not null default current_timestamp);
   create unique index if not exists event_rsvps_event_email on event_rsvps (event_id, email);
+  create table if not exists works (id integer primary key, title text not null, description text default '', creator text default '', model_path text not null, source_path text default '', image_path text default '', sort_order integer default 0, published integer not null default 1, created_at text not null default current_timestamp);
   create table if not exists sponsors (id integer primary key, name text not null, logo_path text, url text default '', tier text default 'Community', sort_order integer default 0, published integer not null default 1, created_at text not null default current_timestamp);
   create table if not exists admin_actions (id integer primary key, admin_id integer references admins(id) on delete set null, action text not null, target_table text, target_id integer, created_at text not null default current_timestamp);
 `)

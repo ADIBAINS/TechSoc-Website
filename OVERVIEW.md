@@ -215,3 +215,39 @@ nightly cleanup cron (requires `CRON_SECRET` in prod env).
   the cron only deletes expired sessions and reports the inbox count.
 - Fallback demo content masks empty DB — if the homepage shows strangers
   (Maya/Marcus/…), the DB read returned zero rows; check `DATABASE_URL`.
+
+## Blender / 3D Works
+
+The supplied model from [1Nitin1/Techsoc-website](https://github.com/1Nitin1/Techsoc-website)
+ships at `public/models/techsoc.glb` and is the homepage default when no hero
+asset is configured. Existing hero settings keep precedence. The 3D Works
+section uses the same model as a clearly labeled reference until work is published.
+
+To publish: `/admin` → **3D Works** → **Add 3D work**. Enter the title and
+creator, upload a GLB, check the live preview, choose Published or Draft, and save.
+Optional cover images appear in the collection; optional uncompressed `.blend`
+files become public source downloads. Drafts hide records from the public feed;
+upload URLs themselves are public, as with other site media. Lower display-order
+numbers appear first. Admins and editors can manage works. The Homepage tab can
+also upload/preview a model as the hero (admin only).
+
+Export with Blender's **File → Export → glTF 2.0 → glTF Binary (.glb)**.
+GLB packages the geometry and textures in one file. Self-contained GLTF with data
+URIs is also accepted; separate `.bin` and texture references require a GLB export.
+Raw `.blend` files are downloadable sources and require a GLB/GLTF for viewing.
+Disable **Compress** when saving a `.blend` source. Every file has a 25MB cap.
+The uploader checks extensions and actual bytes rather than browser MIME labels.
+
+The locally bundled, lazy-loaded `@google/model-viewer` provides orbit/zoom,
+spin, reset, animation playback (when a model includes animations), and the
+shared fullscreen viewer. Automatic motion respects reduced-motion preferences.
+Uncompressed models work without a viewer CDN; models using Draco/KTX codecs
+may still require the viewer's external decoder resources.
+
+`works(id,title,description,creator,model_path,source_path,image_path,sort_order,
+published,created_at)` is included in both DB schemas and the DB/upload migration
+scripts. `GET /api/content` returns published works; `/api/admin-content` accepts
+`type: "works"` for authenticated CRUD with audit logging.
+
+Validation: `npm run build && npm run typecheck`, then
+`node --test tests/3d-works.test.mjs` (isolated SQLite/uploads, no production data).

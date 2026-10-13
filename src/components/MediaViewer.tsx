@@ -6,6 +6,7 @@ import type { MediaItem } from '../lib/media'
 
 export function MediaViewer({ title, items, index, onIndexChange, onClose }: { title: string; items: MediaItem[]; index: number; onIndexChange: (next: number) => void; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const restoreRef = useRef<Element | null>(null)
   const count = items.length
   const go = useCallback((delta: number) => {
@@ -27,12 +28,19 @@ export function MediaViewer({ title, items, index, onIndexChange, onClose }: { t
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); onClose() }
-      if (event.key === 'ArrowRight') { event.preventDefault(); go(1) }
-      if (event.key === 'ArrowLeft') { event.preventDefault(); go(-1) }
+      if (event.key === 'Tab') {
+        const focusable = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], video[controls], model-viewer') ?? [])
+        const first = focusable[0], last = focusable[focusable.length - 1]
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+      }
+      const inModel = (event.target as HTMLElement)?.closest?.('.reference-model-surface')
+      if (!inModel && count > 1 && event.key === 'ArrowRight') { event.preventDefault(); go(1) }
+      if (!inModel && count > 1 && event.key === 'ArrowLeft') { event.preventDefault(); go(-1) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [go, onClose])
+  }, [go, onClose, count])
 
   if (typeof document === 'undefined' || !count) return null
   const item = items[index]
@@ -40,7 +48,7 @@ export function MediaViewer({ title, items, index, onIndexChange, onClose }: { t
 
   return createPortal(
     <div className="media-viewer" role="dialog" aria-modal="true" aria-label={`${title} — media viewer`} onClick={onClose}>
-      <div className="media-viewer-panel" onClick={(event) => event.stopPropagation()}>
+      <div ref={panelRef} className="media-viewer-panel" onClick={(event) => event.stopPropagation()}>
         <header className="media-viewer-head">
           <div><span className="reference-kicker">{title}</span>{multiple && <b>{index + 1} / {count}</b>}</div>
           <button ref={closeRef} onClick={onClose} aria-label="Close viewer"><X size={20} /></button>

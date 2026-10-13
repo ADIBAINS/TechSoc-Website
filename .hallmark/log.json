@@ -1,5 +1,12 @@
 [
   {
+    "date": "2026-10-13",
+    "macrostructure": "Portfolio Grid",
+    "theme": "Existing TechSoc cyan",
+    "enrichment": "Supplied TechSoc GLB",
+    "brief": "Blender work uploads and interactive 3D gallery; existing navigation and footer preserved"
+  },
+  {
     "date": "2026-10-09",
     "macrostructure": "Workbench",
     "theme": "Existing TechSoc cyan",

@@ -16,6 +16,7 @@
     "test:owner": "npm run build && node --test tests/owner-account.test.mjs"
   },
   "dependencies": {
+    "@google/model-viewer": "^4.4.0",
     "@neondatabase/serverless": "^1.1.0",
     "@tanstack/react-router": "^1.120.5",
     "@tanstack/react-start": "1.168.60",

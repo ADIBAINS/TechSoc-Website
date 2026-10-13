@@ -32,7 +32,7 @@ if (process.env.DATABASE_URL) {
   pg = neon(process.env.DATABASE_URL)
 }
 
-const contentTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.mp4': 'video/mp4', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json' }
+const contentTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif', '.mp4': 'video/mp4', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.blend': 'application/octet-stream' }
 const isLocalUpload = (p) => typeof p === 'string' && p.startsWith('/api/uploads/')
 const filenameOf = (p) => path.basename(p)
 
@@ -53,6 +53,9 @@ scan('members', 'id', 'image_path')
 scan('events', 'id', 'cover_image_path')
 scan('memories', 'id', 'image_path')
 scan('memory_media', 'id', 'path')
+scan('works', 'id', 'model_path')
+scan('works', 'id', 'source_path')
+scan('works', 'id', 'image_path')
 try {
   const hero = lite.prepare(`select value from site_settings where key = 'hero_asset'`).get()
   if (hero) {

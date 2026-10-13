@@ -7,4 +7,12 @@
   --color-admin-accent-ink: #031014;
   --color-admin-tint: rgba(0, 200, 245, .08);
   --color-admin-clear: transparent;
+  --font-work-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-work-body: Inter, system-ui, sans-serif;
+  --color-work-tint: oklch(74% .15 225 / .07);
+  --color-work-stage: oklch(16% .015 225);
+  --color-work-clear: transparent;
+  --space-work-sm: 12px;
+  --space-work-md: 24px;
+  --space-work-lg: 40px;
 }
